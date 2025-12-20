@@ -11,7 +11,7 @@ try {
     
     // White background
     var bg = new jsmaf.Slate();
-    bg.color = "rgb(100,100,100)";
+    bg.color = "rgb(255,255,255)"; //change this for background color
     bg.width = jsmaf.screenWidth;
     bg.height = jsmaf.screenHeight;
     jsmaf.root.children.push(bg);
