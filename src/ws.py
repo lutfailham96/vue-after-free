@@ -3,7 +3,7 @@
 import asyncio
 import pathlib
 import argparse
-import aioconsole
+import readline
 import websockets
 
 
@@ -40,8 +40,17 @@ async def send_file(ws: websockets.ClientConnection, file_path: str):
 
 
 async def command(ws: websockets.ClientConnection):
+    loop = asyncio.get_event_loop()
     while ws.state == websockets.protocol.State.OPEN:
-        cmd = await aioconsole.ainput()
+        try:
+            cmd = await loop.run_in_executor(None, input, "> ")
+        except (EOFError, KeyboardInterrupt):
+            print("\n[*] Disconnecting...")
+            await ws.close()
+            global retry
+            retry = False
+            break
+
         parts = cmd.split(maxsplit=1)
 
         if len(parts) == 2 and parts[0].lower() == "send":
@@ -49,7 +58,6 @@ async def command(ws: websockets.ClientConnection):
         elif cmd.lower() in ("quit", "exit", "disconnect"):
             print("[*] Disconnecting...")
             await ws.close()
-            global retry
             retry = False
             break
         else:
