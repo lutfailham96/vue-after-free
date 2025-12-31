@@ -186,9 +186,10 @@ declare type Fn = {
 }
 
 declare class SyscallError extends Error {
+  syscall: string
   errno: number
   strerror: string
-  constructor (msg: string, errno: number, strerror: string)
+  constructor (syscall: string, errno: number, strerror: string)
 }
 
 declare var jsc_addr: vue.BigInt
