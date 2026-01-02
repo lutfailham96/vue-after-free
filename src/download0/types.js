@@ -805,7 +805,7 @@ var struct = {
       }
 
       if (size === 0) {
-          throw new Error(`Invalid size for ${field_name} !!`)
+          throw new Error(`Invalid size for ${field.name} !!`)
       }
 
       count = count ? parseInt(count) : 1
@@ -867,9 +867,11 @@ var struct = {
             case 'Int64':
               arr = new Uint32Array(info.count * 2)
               utils.set_backing(arr, addr)
+              break
             case 'Uint64':
               arr = new Uint32Array(info.count * 2)
               utils.set_backing(arr, addr)
+              break
             default:
               if (info.type in this) {
                 for (var i = 0; i < info.count; i++) {
