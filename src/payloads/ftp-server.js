@@ -1,7 +1,7 @@
 // Full-Featured FTP Server for PS4
 // Opens on port 42069
 
-include('inject.js')
+include('userland.js')
 
 jsmaf.remotePlay = true
 
