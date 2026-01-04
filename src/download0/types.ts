@@ -532,7 +532,7 @@ type ArgTypeToRealType<T extends ArgType> = T extends 'bigint' ? BigInt :
         never
 
 type Fn<Fns = object> = {
-  register<const Name extends string, const Args extends ArgType[], const Return extends ('bigint' | 'boolean' | 'string')> (input: BigInt | number, name: Name, args: Args, ret: Return): asserts this is Fn<Fns & Record<Name, (...args: { [K in keyof Args]: ArgTypeToRealType<Args[K]> }) => ArgTypeToRealType<Return>>>
+  register<const Name extends string, const Args extends ArgType[], const Return extends ('bigint' | 'boolean' | 'string')> (input: BigInt | number, name: Name, args: Args, ret: Return, skipAlreadyRegistered?: boolean): asserts this is Fn<Fns & Record<Name, (...args: { [K in keyof Args]: ArgTypeToRealType<Args[K]> }) => ArgTypeToRealType<Return>>>
   unregister<const Name extends string> (name: Name): asserts this is Fn<Omit<Fns, Name>>
   wrapper (this: {
     id?: BigInt
@@ -547,8 +547,8 @@ type Fn<Fns = object> = {
 } & Fns
 
 const fn: Fn = {
-  register: function (input: BigInt | number, name: string, _args: ('bigint' | 'number' | 'boolean' | 'string')[], ret: string) {
-    if (name in this) {
+  register: function (input: BigInt | number, name: string, _args: ('bigint' | 'number' | 'boolean' | 'string')[], ret: string, skipAlreadyRegistered = true) {
+    if (name in this && !skipAlreadyRegistered) {
       throw new Error(`${name} already registered in fn !!`)
     }
 
@@ -565,7 +565,7 @@ const fn: Fn = {
       addr = syscalls.map.get(input)
     }
 
-    var f = this.wrapper.bind({ id, addr, ret, name })
+    const f = this.wrapper.bind({ id, addr, ret, name })
 
     fn[name] = f
   },
@@ -620,8 +620,8 @@ const fn: Fn = {
 
     insts.push(this.addr)
 
-    var store_size = this.ret ? 0x10 : 8
-    var store_addr = mem.malloc(store_size)
+    const store_size = this.ret ? 0x10 : 8
+    const store_addr = mem.malloc(store_size)
 
     if (this.ret) {
       rop.store(insts, store_addr, 1)
@@ -629,15 +629,15 @@ const fn: Fn = {
 
     rop.execute(insts, store_addr, store_size)
 
-    var result
+    let result
     if (this.ret) {
       result = mem.view(store_addr).getBigInt(8, true)
 
       if (this.id) {
         if (result.eq(-1)) {
-          var errno_addr = (this._error!)()
-          var errno = mem.view(errno_addr).getUint32(0, true)
-          var str = (this.strerror!)(errno)
+          const errno_addr = (this._error!)()
+          const errno = mem.view(errno_addr).getUint32(0, true)
+          const str = (this.strerror!)(errno)
 
           throw new Error(`${this.name} returned errno ${errno}: ${str}`)
         }
@@ -926,7 +926,7 @@ interface StructConstructor<Name extends string, T extends readonly StructField<
 type StructConstructors = Record<string, StructConstructor<string, readonly StructField<StructConstructors>[], StructConstructors>>
 
 type Struct<Structs = object> = {
-  register<const Name extends string, const Fields extends readonly StructField<Structs>[]> (name: Name, fields: Fields): asserts this is Struct<Structs & Record<Name, StructConstructor<Name, Fields, Structs>>>
+  register<const Name extends string, const Fields extends readonly StructField<Structs>[]> (name: Name, fields: Fields, skipAlreadyRegistered?: boolean): asserts this is Struct<Structs & Record<Name, StructConstructor<Name, Fields, Structs>>>
   unregister<const Name extends string> (name: Name): asserts this is Struct<Omit<Structs, Name>>
   parse (fields: readonly StructField<Structs>[]): [number, { type: string; name: string; offset: number; size: number; count: number; pointer: boolean }[]]
   define_property (cls: StructConstructor<string, readonly StructField<StructConstructors>[], StructConstructors>, info: { type: string; name: string; offset: number; size: number; count: number; pointer: boolean }): void
@@ -934,12 +934,12 @@ type Struct<Structs = object> = {
 } & Structs
 
 const struct: Struct = {
-  register: function (name, fields) {
+  register: function (name, fields, skipAlreadyRegistered = true) {
     if (!Array.isArray(fields) || fields.length === 0) {
       throw new Error('Empty fields array !!')
     }
 
-    if (name in this) {
+    if (name in this && !skipAlreadyRegistered) {
       throw new Error(`${name} already registered in struct !!`)
     }
 
