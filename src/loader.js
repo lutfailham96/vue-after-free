@@ -1,22 +1,16 @@
 // Load binloader first (just defines the function, doesn't execute)
 
 // Now load userland and lapse
-    // Check if libc_addr is defined
-    if (typeof libc_addr === 'undefined') {
-        include('userland.js')
-    }
-
+include('userland.js')
 include('binloader.js')
 include('lapse.js')
-function show_success(){
-    
-        jsmaf.root.children.push(bg_success);
-
-    }
 
 // Check if lapse.js has completed successfully
 function is_lapse_complete() {
-
+    // Check if libc_addr is defined
+    if (typeof libc_addr === 'undefined') {
+        return false;
+    }
 
     // Check if kernel object exists with read/write functions
     if (typeof kernel === 'undefined' || !kernel.read_qword || !kernel.write_qword) {
@@ -42,9 +36,8 @@ function is_lapse_complete() {
 
 // Wait for lapse to complete, then load binloader
 log("Waiting for lapse.js to complete...");
-lapse()
 var start_time = Date.now();
-var max_wait_seconds = 5;
+var max_wait_seconds = 60;
 var max_wait_ms = max_wait_seconds * 1000;
 
 while (!is_lapse_complete()) {
@@ -61,7 +54,7 @@ while (!is_lapse_complete()) {
         // Busy wait
     }
 }
-show_success();
+
 var total_wait = ((Date.now() - start_time) / 1000).toFixed(1);
 log("Lapse completed successfully after " + total_wait + " seconds");
 log("Initializing binloader...");

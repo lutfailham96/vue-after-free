@@ -146,8 +146,7 @@ var html = '<!DOCTYPE html>\n' +
 'connectWS();\n' +
 'window.onload = function() {\n'+
 'goFullscreen();\n'+
-'};\n'+
-
+'};\n' +
 '</script>\n' +
 '</body>\n' +
 '</html>\n'
