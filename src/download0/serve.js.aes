@@ -69,17 +69,6 @@ try {
     });
     jsmaf.root.children.push(logo);
     
-
-    // Button 1 - "Jailbreak"
-    var button1 = new Image({
-        url: "file:///../download0/img/btn_jb.png",
-        x: 800,
-        y: 780,
-        width: 300,
-        height: 80
-    });
-   
-    jsmaf.root.children.push(button1);
     
     jsmaf.onKeyDown = function(keyCode) {
         //cross pressed
