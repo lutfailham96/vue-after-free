@@ -37,10 +37,11 @@ jobs:
         run: |
           pip install cryptography
           python src/tools/encrypt_aes_files.py src/savedata/localstorage
-          cp src/savedata/localstorage.aes dist/download0/
+          mkdir -p dist/savedata
+          cp src/savedata/localstorage.aes dist/savedata/
 
       - name: Zip dist
-        run: cd dist/download0 && zip -r ../../vue-after-free-${{ github.ref_name }}.zip . && cd ../..
+        run: cd dist && zip -r ../vue-after-free-${{ github.ref_name }}.zip download0/ savedata/ && cd ..
 
       - name: Upload dist artifact
         uses: actions/upload-artifact@v4
