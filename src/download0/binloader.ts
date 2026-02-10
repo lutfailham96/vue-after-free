@@ -710,7 +710,7 @@ export function binloader_init () {
       bl_load_from_file('/mnt/sandbox/download/CUSA00960/payloads/aiofix_network.elf', true)
     }
     // Priority 1: Check for USB payload on usb0-usb4 (like BD-JB does)
-    //for (const usb_path of USB_PAYLOAD_PATHS) {
+    // for (const usb_path of USB_PAYLOAD_PATHS) {
     //  const usb_size = bl_file_exists(usb_path)
 
     //  if (usb_size > 0) {
@@ -727,19 +727,19 @@ export function binloader_init () {
     //    // Load from USB
     //    return bl_load_from_file(usb_path, false)
     //  }
-    //}
+    // }
 
     // Priority 2: Check for cached /data payload
-    //const data_size = bl_file_exists(DATA_PAYLOAD_PATH)
-    //if (data_size > 0) {
+    // const data_size = bl_file_exists(DATA_PAYLOAD_PATH)
+    // if (data_size > 0) {
     //  log('Found cached payload: ' + DATA_PAYLOAD_PATH + ' (' + data_size + ' bytes)')
     //  return bl_load_from_file(DATA_PAYLOAD_PATH, false)
-    //}
+    // }
 
     // Priority 3: Fall back to network loader
-    //log('No payload file found, starting network loader')
-    //utils.notify('No payload found.\nStarting network loader...')
-    //return bl_network_loader()
+    // log('No payload file found, starting network loader')
+    // utils.notify('No payload found.\nStarting network loader...')
+    // return bl_network_loader()
 
     return
   }
