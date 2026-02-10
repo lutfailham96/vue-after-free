@@ -740,6 +740,7 @@ export function binloader_init () {
     //log('No payload file found, starting network loader')
     //utils.notify('No payload found.\nStarting network loader...')
     //return bl_network_loader()
+
     return
   }
 
