@@ -3,9 +3,10 @@ export const CONFIG = {
   autopoop: false,
   autoclose: true,
   music: false,
-  jb_behavior: 0
+  jb_behavior: 1
 }
 
 export const payloads = [ // to be ran after jailbroken
 //  '/mnt/sandbox/download/CUSA00960/payloads/example_payload.elf'
+  '/mnt/sandbox/download/CUSA00960/payloads/goldhen.bin'
 ]

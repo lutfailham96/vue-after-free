@@ -101,13 +101,13 @@ export function binloader_init () {
   const BL_O_TRUNC = 0x400
 
   // USB and data paths (check usb0-usb4 like BD-JB does)
-  // const USB_PAYLOAD_PATHS = [
-  //   '/mnt/usb0/payload.bin',
-  //   '/mnt/usb1/payload.bin',
-  //   '/mnt/usb2/payload.bin',
-  //   '/mnt/usb3/payload.bin',
-  //   '/mnt/usb4/payload.bin'
-  // ]
+  const USB_PAYLOAD_PATHS = [
+    '/mnt/usb0/payload.bin',
+    '/mnt/usb1/payload.bin',
+    '/mnt/usb2/payload.bin',
+    '/mnt/usb3/payload.bin',
+    '/mnt/usb4/payload.bin'
+  ]
   const DATA_PAYLOAD_PATH = '/data/payload.bin'
 
   // S_ISREG macro check - file type is regular file
@@ -710,24 +710,24 @@ export function binloader_init () {
       bl_load_from_file('/mnt/sandbox/download/CUSA00960/payloads/aiofix_network.elf', true)
     }
     // Priority 1: Check for USB payload on usb0-usb4 (like BD-JB does)
-    // for (const usb_path of USB_PAYLOAD_PATHS) {
-    //   const usb_size = bl_file_exists(usb_path)
+    for (const usb_path of USB_PAYLOAD_PATHS) {
+      const usb_size = bl_file_exists(usb_path)
 
-    //   if (usb_size > 0) {
-    //     log('Found USB payload: ' + usb_path + ' (' + usb_size + ' bytes)')
-    //     utils.notify('USB payload found!\nCopying to /data...')
+      if (usb_size > 0) {
+        log('Found USB payload: ' + usb_path + ' (' + usb_size + ' bytes)')
+        utils.notify('USB payload found!\nCopying to /data...')
 
-    //     // Copy USB payload to /data for future use
-    //     if (bl_copy_file(usb_path, DATA_PAYLOAD_PATH)) {
-    //       log('Copied to ' + DATA_PAYLOAD_PATH)
-    //     } else {
-    //       log('Warning: Failed to copy to /data, running from USB')
-    //     }
+        // Copy USB payload to /data for future use
+        if (bl_copy_file(usb_path, DATA_PAYLOAD_PATH)) {
+          log('Copied to ' + DATA_PAYLOAD_PATH)
+        } else {
+          log('Warning: Failed to copy to /data, running from USB')
+        }
 
-    //     // Load from USB
-    //     return bl_load_from_file(usb_path, false)
-    //   }
-    // }
+        // Load from USB
+        return bl_load_from_file(usb_path, false)
+      }
+    }
 
     // Priority 2: Check for cached /data payload
     const data_size = bl_file_exists(DATA_PAYLOAD_PATH)
