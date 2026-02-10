@@ -710,36 +710,37 @@ export function binloader_init () {
       bl_load_from_file('/mnt/sandbox/download/CUSA00960/payloads/aiofix_network.elf', true)
     }
     // Priority 1: Check for USB payload on usb0-usb4 (like BD-JB does)
-    for (const usb_path of USB_PAYLOAD_PATHS) {
-      const usb_size = bl_file_exists(usb_path)
+    //for (const usb_path of USB_PAYLOAD_PATHS) {
+    //  const usb_size = bl_file_exists(usb_path)
 
-      if (usb_size > 0) {
-        log('Found USB payload: ' + usb_path + ' (' + usb_size + ' bytes)')
-        utils.notify('USB payload found!\nCopying to /data...')
+    //  if (usb_size > 0) {
+    //    log('Found USB payload: ' + usb_path + ' (' + usb_size + ' bytes)')
+    //    utils.notify('USB payload found!\nCopying to /data...')
 
-        // Copy USB payload to /data for future use
-        if (bl_copy_file(usb_path, DATA_PAYLOAD_PATH)) {
-          log('Copied to ' + DATA_PAYLOAD_PATH)
-        } else {
-          log('Warning: Failed to copy to /data, running from USB')
-        }
+    //    // Copy USB payload to /data for future use
+    //    if (bl_copy_file(usb_path, DATA_PAYLOAD_PATH)) {
+    //      log('Copied to ' + DATA_PAYLOAD_PATH)
+    //    } else {
+    //      log('Warning: Failed to copy to /data, running from USB')
+    //    }
 
-        // Load from USB
-        return bl_load_from_file(usb_path, false)
-      }
-    }
+    //    // Load from USB
+    //    return bl_load_from_file(usb_path, false)
+    //  }
+    //}
 
     // Priority 2: Check for cached /data payload
-    const data_size = bl_file_exists(DATA_PAYLOAD_PATH)
-    if (data_size > 0) {
-      log('Found cached payload: ' + DATA_PAYLOAD_PATH + ' (' + data_size + ' bytes)')
-      return bl_load_from_file(DATA_PAYLOAD_PATH, false)
-    }
+    //const data_size = bl_file_exists(DATA_PAYLOAD_PATH)
+    //if (data_size > 0) {
+    //  log('Found cached payload: ' + DATA_PAYLOAD_PATH + ' (' + data_size + ' bytes)')
+    //  return bl_load_from_file(DATA_PAYLOAD_PATH, false)
+    //}
 
     // Priority 3: Fall back to network loader
-    log('No payload file found, starting network loader')
-    utils.notify('No payload found.\nStarting network loader...')
-    return bl_network_loader()
+    //log('No payload file found, starting network loader')
+    //utils.notify('No payload found.\nStarting network loader...')
+    //return bl_network_loader()
+    return
   }
 
   // End of binloader_init() function
