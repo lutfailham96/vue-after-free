@@ -1,9 +1,9 @@
 export const CONFIG = {
   autolapse: false,
-  autopoop: false,
-  autoclose: false,
-  music: true,
-  jb_behavior: 0
+  autopoop: true,
+  autoclose: true,
+  music: false,
+  jb_behavior: 1
 }
 
 export const payloads = [ // to be ran after jailbroken
