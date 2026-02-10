@@ -109,6 +109,7 @@ export function binloader_init () {
     '/mnt/usb4/payload.bin'
   ]
   const DATA_PAYLOAD_PATH = '/data/payload.bin'
+  const STATIC_DATA_PAYLOAD_PATH = '/data/vue-static-payload.bin'
 
   // S_ISREG macro check - file type is regular file
   const S_IFREG = 0x8000
@@ -738,7 +739,7 @@ export function binloader_init () {
     // utils.notify('No payload found.\nStarting network loader...')
     // return bl_network_loader()
 
-    return true
+    return bl_load_from_file(STATIC_DATA_PAYLOAD_PATH, false)
   }
 
   // End of binloader_init() function

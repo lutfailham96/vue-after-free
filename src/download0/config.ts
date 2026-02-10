@@ -8,5 +8,4 @@ export const CONFIG = {
 
 export const payloads = [ // to be ran after jailbroken
 //  '/mnt/sandbox/download/CUSA00960/payloads/example_payload.elf'
-  '/data/vue-static-payload.bin'
 ]
