@@ -108,7 +108,7 @@ export function binloader_init () {
     '/mnt/usb3/payload.bin',
     '/mnt/usb4/payload.bin'
   ]
-  const DATA_PAYLOAD_PATH = '/data/payload.bin'
+  const DATA_PAYLOAD_PATH = '/data/vue-payload.bin'
 
   // S_ISREG macro check - file type is regular file
   const S_IFREG = 0x8000
