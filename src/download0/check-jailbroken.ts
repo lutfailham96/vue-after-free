@@ -1,6 +1,12 @@
 import { fn, BigInt } from 'download0/types'
 
+// Cached JB status — avoids repeated getuid()+setuid() syscalls (PR #67 idea)
+let _jbCached: boolean | null = null
+
 export function checkJailbroken (): boolean {
+  // Return cached result if available (safe — JB status doesn't change within a session)
+  if (_jbCached !== null) return _jbCached
+
   fn.register(24, 'getuid', [], 'bigint')
   fn.register(23, 'setuid', ['number'], 'bigint')
 
@@ -24,5 +30,10 @@ export function checkJailbroken (): boolean {
 
   const jailbroken = uidAfterVal === 0
   log(jailbroken ? 'Already jailbroken' : 'Not jailbroken')
+  _jbCached = jailbroken
   return jailbroken
+}
+
+export function resetJBCache (): void {
+  _jbCached = null
 }
