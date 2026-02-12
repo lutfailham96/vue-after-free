@@ -499,11 +499,11 @@ export function binloader_init () {
           const pid_num = (pid instanceof BigInt) ? pid.lo : pid
           log('Current PID: ' + pid_num)
 
-          // Wait 5 seconds before killing to allow save data to flush
+          // Wait 3 seconds before killing to allow save data to flush
           // This prevents save corruption reported in issue #33
-          log('Waiting 5s for filesystem flush before auto-close...')
+          log('Waiting 3s for filesystem flush before auto-close...')
           const flush_start = Date.now()
-          while (Date.now() - flush_start < 5000) {
+          while (Date.now() - flush_start < 3000) {
             undefined // Busy wait to let filesystem operations complete
           }
 
