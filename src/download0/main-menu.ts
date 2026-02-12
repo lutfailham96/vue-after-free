@@ -23,7 +23,7 @@ import { fn, BigInt } from 'download0/types'
 
   if (typeof CONFIG !== 'undefined' && CONFIG.music) {
     const audio = new jsmaf.AudioClip()
-    audio.volume = 0.5  // 50% volume
+    audio.volume = 0.5
     audio.open('file://../download0/sfx/bgm.wav')
   }
 

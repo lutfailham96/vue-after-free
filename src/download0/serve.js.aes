@@ -240,11 +240,15 @@ try {
         });
     }
     
-    if(CONFIG.autolapse){  include('loader.js')  }
-    if(CONFIG.autopoop && psn.mainUser.signedIn){  include('netctrl_c0w_twins.js')  } //failsafe so poopsploit users dont get stuck 
-    
-    include('main-menu.js')
-    
+    if(CONFIG.autolapse){
+        include('loader.js')
+    } else if(CONFIG.autopoop && psn.mainUser.signedIn){
+        CONFIG.jb_behavior = 1
+        include('loader.js')
+    } 
+    else {
+        include('main-menu.js')
+    }
     
     // handle WebSocket received messages
     ws.onmessage = function(c, e) {
