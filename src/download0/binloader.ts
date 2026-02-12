@@ -610,7 +610,9 @@ export function binloader_init () {
         show_success()
         log('Waiting 3 seconds...')
         const delay_start = Date.now()
-        while (Date.now() - delay_start < 3000) {}
+        while (Date.now() - delay_start < 3000) {
+          void 0; // avoids empty block lint error
+        }
       }
 
       BinLoader.run()
