@@ -490,9 +490,9 @@ export function binloader_init () {
           log('Current PID: ' + pid_num)
           log('Sending SIGKILL to PID ' + pid_num)
 
-          // Wait for 1 seconds
+          // Wait for 0.5 seconds to prevent crash
           const delay_start = Date.now()
-          while (Date.now() - delay_start < 1000) {
+          while (Date.now() - delay_start < 500) {
             undefined // just a no-op
           }
 
