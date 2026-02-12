@@ -485,7 +485,6 @@ export function binloader_init () {
           log('Current PID: ' + pid_num)
           log('Sending SIGKILL to PID ' + pid_num)
 
-
           // Wait for 1 seconds
           const delay_start = Date.now()
           while (Date.now() - delay_start < 1000) {
