@@ -301,6 +301,9 @@ import { fn, BigInt } from 'download0/types'
     } else if (currentButton < menuOptions.length) {
       const selectedOption = menuOptions[currentButton]
       if (!selectedOption) return
+      if (selectedOption.script === 'loader.js') {
+        jsmaf.onKeyDown = function () {}
+      }
       log('Loading ' + selectedOption.script + '...')
       try {
         include(selectedOption.script)
