@@ -35,7 +35,7 @@ import { utils } from 'download0/types'
     new Style({ name: 'count', color: 'rgb(180,180,180)', size: 20 })
 
     var bg = new Image({
-      url: 'file:///../download0/img/multiview_bg_VAF.png',
+      url: 'file:///assets/img/bg_blue_wave.png',
       x: 0,
       y: 0,
       width: 1920,
@@ -101,7 +101,7 @@ import { utils } from 'download0/types'
     var done = index
     var pct = total > 0 ? done / total : 0
     progressFg.width = Math.floor(barW * pct)
-    countText.text = done + ' / ' + total + ' (updated: ' + updated + ', skipped: ' + skipped + ')'
+    countText.text = done + ' / ' + total + ' (updated: ' + updated + ')'
   }
 
   function updateStatus (msg: string) {
@@ -129,13 +129,31 @@ import { utils } from 'download0/types'
 
   function checkDone () {
     updateProgress()
-    updateStatus('Updated: ' + updated + ', Failed: ' + failed + ', Skipped: ' + skipped)
+    updateStatus('Updated: ' + updated + (failed > 0 ? ', Failed: ' + failed : ''))
     titleText.text = 'Update Complete!'
     titleText.x = 960 - 130
     log('=== Update Complete ===')
-    log('Updated: ' + updated + ' | Failed: ' + failed + ' | Skipped: ' + skipped)
+    log('Updated: ' + updated + ' | Failed: ' + failed)
     if (failed === 0) {
-      utils.notify('VAF Updated!\n' + updated + ' files\nRefresh to load new version')
+      var thumbsUp = '\xF0\x9F\x91\x8D'
+      utils.notify('Update Complete! ' + thumbsUp)
+    }
+
+    // Show restart prompt
+    var confirmKey = jsmaf.circleIsAdvanceButton ? 13 : 14
+    var buttonName = jsmaf.circleIsAdvanceButton ? 'O' : 'X'
+    var restartText = new jsmaf.Text()
+    restartText.text = 'Press ' + buttonName + ' to restart'
+    restartText.x = 960 - 100
+    restartText.y = barY + 120
+    restartText.style = 'status'
+    jsmaf.root.children.push(restartText)
+
+    jsmaf.onKeyDown = function (keyCode: number) {
+      if (keyCode === confirmKey) {
+        jsmaf.onKeyDown = function () {}
+        debugging.restart()
+      }
     }
   }
 
