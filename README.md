@@ -33,14 +33,30 @@ This table indicates firmware versions for which the _current version_ of this r
 * Userland exploit works 5.05 to 13.02 as is.
 
 # FAQ
-Q: Will this work on 13.02 or above? A: Only the userland, you cannot jailbreak above 13.00 with the files in this repo.    
-Q: I ran Vue and the app crashed? A: If the app crashes the exploit failed reboot the console and try again.    
-Q: I ran Vue and my console shutdown what do I do? A: If a kernel panic occurred you may need to press the power button on your console twice, then retry running the exploit.    
-Q: How can I run a payload? A: Closing and Reopening Vue is required between running js payloads, but .bin or .elf payloads can be run one after the other. Select the payload from the UI in the Payload Menu.    
-Q: Can I run the jailbreak offline? A: No. PS Vue requires any form of network connection, internet is not required as such you can use any network like home WiFi or Hotspot from your mobile phone or a network from a micro controller like ESP32 or an Ethernet network from a reporpused PPPwn device.     
-Q: I am getting "This service requires you to sign in to PlayStation Network" even after replacing the save file how can I fix it? A: Your Vue app most likely updated, this usually happens when not using a DNS or blocking Sony servers in general. You will have to delete and reinstall it.     
-Q: My payload is not recognized what should I do? A: Format your USB drive to mbr partition and exfat format. 
-Q: I am getting " There is a network communication issue" error. A: It indicates that either Vue has updated or your save file has reset and you should use your own profile backup's save. Or if using the system backup from this repo unpack the `encryptedsavebackup.zip` to a usb and import it with the ps4 saved data management.
+
+**Q: Will this work on 13.02 or above?**
+Only the userland, you cannot jailbreak above 13.00 with the files in this repo.
+
+**Q: I ran Vue and the app crashed?**
+If the app crashes the exploit failed, reboot the console and try again.
+
+**Q: I ran Vue and my console shutdown, what do I do?**
+If a kernel panic occurred you may need to press the power button on your console twice, then retry running the exploit.
+
+**Q: How can I run a payload?**
+Closing and reopening Vue is required between running JS payloads, but .bin or .elf payloads can be run one after the other. Select the payload from the UI in the Payload Menu.
+
+**Q: Can I run the jailbreak offline?**
+No. PS Vue requires any form of network connection. Internet is not required, so you can use any network like home WiFi, a hotspot from your mobile phone, a network from a microcontroller like ESP32, or an Ethernet network from a repurposed PPPwn device.
+
+**Q: I am getting "This service requires you to sign in to PlayStation Network" even after replacing the save file, how can I fix it?**
+Your Vue app most likely updated. This usually happens when not using a DNS or blocking Sony servers. You will have to delete and reinstall it.
+
+**Q: My payload is not recognized, what should I do?**
+Format your USB drive to MBR partition and exFAT format.
+
+**Q: I am getting "There is a network communication issue" error.**
+This indicates that either Vue has updated or your save file has reset. Use your own profile backup's save, or if using the system backup from this repo, unpack the `encryptedsavebackup.zip` to a USB and import it with the PS4 saved data management.
 
 > [!IMPORTANT]
 > The Vue save file may occasionally reset. To avoid issues please copy the encrypted save to a USB, from the PS4 settings menu for the user that is used to run the jailbreak, for easy future recovery.   
