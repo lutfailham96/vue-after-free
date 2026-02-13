@@ -74,29 +74,29 @@ jobs:
         with:
           files: vue-after-free-${{ github.ref_name }}.zip
 
-  deploy-pages:
-    needs: build
-    runs-on: ubuntu-latest
+  # deploy-pages:
+  #   needs: build
+  #   runs-on: ubuntu-latest
 
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  #   environment:
+  #     name: github-pages
+  #     url: ${{ steps.deployment.outputs.page_url }}
 
-    steps:
-      - name: Download dist artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
+  #   steps:
+  #     - name: Download dist artifact
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: dist
+  #         path: dist/
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist/
+  #     - name: Upload Pages artifact
+  #       uses: actions/upload-pages-artifact@v3
+  #       with:
+  #         path: dist/
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+  #     - name: Deploy to GitHub Pages
+  #       id: deployment
+  #       uses: actions/deploy-pages@v4
         
   ufs-image:
     needs: build
@@ -145,11 +145,17 @@ jobs:
       - name: Verify image
         run: file download0.dat
 
+      - name: Compress image
+        run: |
+          sudo apt update
+          sudo apt install -y tar xz-utils
+          tar -cJf download0.dat.tar.xz download0.dat
+
       - name: Upload UFS2 image artifact
         uses: actions/upload-artifact@v4
         with:
-          name: download0.dat
-          path: download0.dat
+          name: download0.dat.tar.xz
+          path: download0.dat.tar.xz
 
       - name: Delete dist artifact
         uses: geekyeggo/delete-artifact@v5
@@ -160,4 +166,4 @@ jobs:
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: download0.dat
+          files: download0.dat.tar.xz
