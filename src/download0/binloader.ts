@@ -492,9 +492,7 @@ export function binloader_init () {
 
           // Wait for 0.5 seconds to prevent crash
           const delay_start = Date.now()
-          while (Date.now() - delay_start < 500) {
-            undefined // just a no-op
-          }
+          while (Date.now() - delay_start < 500) { /* busy wait */ }
 
           fn.kill(pid, new BigInt(0, 9))
         } else {
