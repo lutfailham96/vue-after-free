@@ -40,12 +40,14 @@ if (typeof lang === 'undefined') {
     autolapse: boolean
     autopoop: boolean
     autoclose: boolean
+    autoclose_delay: number
     music: boolean
     jb_behavior: number
   } = {
     autolapse: false,
     autopoop: false,
     autoclose: false,
+    autoclose_delay: 0,
     music: true,
     jb_behavior: 0
   }
@@ -353,6 +355,7 @@ if (typeof lang === 'undefined') {
     configContent += '    autolapse: ' + currentConfig.autolapse + ',\n'
     configContent += '    autopoop: ' + currentConfig.autopoop + ',\n'
     configContent += '    autoclose: ' + currentConfig.autoclose + ',\n'
+    configContent += '    autoclose_delay: ' + currentConfig.autoclose_delay + ', //set to 20000 for ps4 hen\n'
     configContent += '    music: ' + currentConfig.music + ',\n'
     configContent += '    jb_behavior: ' + currentConfig.jb_behavior + '\n'
     configContent += '};\n\n'
@@ -388,6 +391,7 @@ if (typeof lang === 'undefined') {
           currentConfig.autolapse = CONFIG.autolapse || false
           currentConfig.autopoop = CONFIG.autopoop || false
           currentConfig.autoclose = CONFIG.autoclose || false
+          currentConfig.autoclose_delay = CONFIG.autoclose_delay || 0
           currentConfig.music = CONFIG.music !== false
           currentConfig.jb_behavior = CONFIG.jb_behavior || 0
 
