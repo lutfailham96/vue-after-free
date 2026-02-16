@@ -365,7 +365,7 @@ import { checkJailbroken } from 'download0/check-jailbroken'
     } else if (keyCode === backKey) {
       log('Going back to main menu...')
       try {
-        include('themes/default/main.js')
+        include('themes/' + (typeof CONFIG !== 'undefined' && CONFIG.theme ? CONFIG.theme : 'default') + '/main.js')
       } catch (e) {
         const err = e as Error
         log('ERROR loading main.js: ' + err.message)

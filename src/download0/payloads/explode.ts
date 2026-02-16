@@ -368,7 +368,7 @@ import { fn, BigInt, mem } from 'download0/types'
       while (Date.now() - cleanup_start < 500) {
         // Wait
       }
-      include('themes/default/main.js')
+      include('themes/' + (typeof CONFIG !== 'undefined' && CONFIG.theme ? CONFIG.theme : 'default') + '/main.js')
     }
   }
 

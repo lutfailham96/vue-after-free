@@ -1,5 +1,6 @@
 import { libc_addr } from 'download0/userland'
 import { lang, useImageText, textImageBase } from 'download0/languages'
+import { fn, mem, BigInt } from 'download0/types'
 
 if (typeof libc_addr === 'undefined') {
   include('userland.js')
@@ -44,7 +45,6 @@ if (typeof lang === 'undefined') {
     music: boolean
     jb_behavior: number
     theme: string
-    themes: string[]
   } = {
     autolapse: false,
     autopoop: false,
@@ -52,8 +52,7 @@ if (typeof lang === 'undefined') {
     autoclose_delay: 0,
     music: true,
     jb_behavior: 0,
-    theme: 'default',
-    themes: ['default']
+    theme: 'default'
   }
 
   // Store user's payloads so we don't overwrite them
@@ -63,10 +62,62 @@ if (typeof lang === 'undefined') {
   const jbBehaviorLabels = [lang.jbBehaviorAuto, lang.jbBehaviorNetctrl, lang.jbBehaviorLapse]
   const jbBehaviorImgKeys = ['jbBehaviorAuto', 'jbBehaviorNetctrl', 'jbBehaviorLapse']
 
-  // These will be updated after config loads
-  let availableThemes = ['default']
-  let themeLabels: string[] = ['Default']
-  let themeImgKeys: string[] = ['themeDefault']
+  function scanThemes (): string[] {
+    const themes: string[] = []
+    try {
+      fn.register(0x05, 'open_sys', ['bigint', 'bigint', 'bigint'], 'bigint')
+      fn.register(0x06, 'close_sys', ['bigint'], 'bigint')
+      fn.register(0x110, 'getdents', ['bigint', 'bigint', 'bigint'], 'bigint')
+
+      const themesDir = '/download0/themes'
+      const path_addr = mem.malloc(256)
+      const buf = mem.malloc(4096)
+
+      for (let i = 0; i < themesDir.length; i++) {
+        mem.view(path_addr).setUint8(i, themesDir.charCodeAt(i))
+      }
+      mem.view(path_addr).setUint8(themesDir.length, 0)
+
+      const fd = fn.open_sys(path_addr, new BigInt(0, 0), new BigInt(0, 0))
+      if (!fd.eq(new BigInt(0xffffffff, 0xffffffff))) {
+        const count = fn.getdents(fd, buf, new BigInt(0, 4096))
+        if (!count.eq(new BigInt(0xffffffff, 0xffffffff)) && count.lo > 0) {
+          let offset = 0
+          while (offset < count.lo) {
+            const d_reclen = mem.view(buf.add(new BigInt(0, offset + 4))).getUint16(0, true)
+            const d_type = mem.view(buf.add(new BigInt(0, offset + 6))).getUint8(0)
+            const d_namlen = mem.view(buf.add(new BigInt(0, offset + 7))).getUint8(0)
+            let name = ''
+            for (let i = 0; i < d_namlen; i++) {
+              name += String.fromCharCode(mem.view(buf.add(new BigInt(0, offset + 8 + i))).getUint8(0))
+            }
+            if (d_type === 4 && name !== '.' && name !== '..') {
+              themes.push(name)
+            }
+            offset += d_reclen
+          }
+        }
+        fn.close_sys(fd)
+      }
+    } catch (e) {
+      log('Theme scan failed: ' + (e as Error).message)
+    }
+
+    const idx = themes.indexOf('default')
+    if (idx > 0) {
+      themes.splice(idx, 1)
+      themes.unshift('default')
+    } else if (idx < 0) {
+      themes.unshift('default')
+    }
+
+    return themes
+  }
+
+  const availableThemes = scanThemes()
+  log('Discovered themes: ' + availableThemes.join(', '))
+  const themeLabels: string[] = availableThemes.map((theme: string) => theme.charAt(0).toUpperCase() + theme.slice(1))
+  const themeImgKeys: string[] = availableThemes.map((theme: string) => 'theme' + theme.charAt(0).toUpperCase() + theme.slice(1))
 
   let currentButton = 0
   const buttons: Image[] = []
@@ -400,8 +451,7 @@ if (typeof lang === 'undefined') {
     configContent += '    autoclose_delay: ' + currentConfig.autoclose_delay + ', //set to 20000 for ps4 hen\n'
     configContent += '    music: ' + currentConfig.music + ',\n'
     configContent += '    jb_behavior: ' + currentConfig.jb_behavior + ',\n'
-    configContent += '    theme: \'' + currentConfig.theme + '\',\n'
-    configContent += '    themes: ' + JSON.stringify(currentConfig.themes) + '\n' // without JSON.stringify corruption will happen
+    configContent += '    theme: \'' + currentConfig.theme + '\'\n'
     configContent += '};\n\n'
     configContent += 'const payloads = [ //to be ran after jailbroken\n'
     for (let i = 0; i < userPayloads.length; i++) {
@@ -439,16 +489,7 @@ if (typeof lang === 'undefined') {
           currentConfig.music = CONFIG.music !== false
           currentConfig.jb_behavior = CONFIG.jb_behavior || 0
 
-          // Update available themes
-          if (CONFIG.themes && Array.isArray(CONFIG.themes) && CONFIG.themes.length > 0) {
-            availableThemes = CONFIG.themes.slice()
-            currentConfig.themes = CONFIG.themes.slice()
-            // Regenerate theme labels and image keys
-            themeLabels = availableThemes.map((theme: string) => theme.charAt(0).toUpperCase() + theme.slice(1))
-            themeImgKeys = availableThemes.map((theme: string) => 'theme' + theme.charAt(0).toUpperCase() + theme.slice(1))
-          }
-
-          // Validate and set theme
+          // Validate and set theme (themes are auto-discovered from directory scan)
           if (CONFIG.theme && availableThemes.includes(CONFIG.theme)) {
             currentConfig.theme = CONFIG.theme
           } else {

@@ -111,7 +111,13 @@ try {
         }
         //triangle
         else if (keyCode === 12) {
-            include('default/payload_host.js')
+            try {
+                var t = (typeof CONFIG !== 'undefined' && CONFIG.theme) ? CONFIG.theme : 'default';
+                include('themes/' + t + '/payload_host.js');
+            } catch(e) {
+                log('Theme payload_host failed, falling back to default: ' + e.message);
+                include('themes/default/payload_host.js');
+            }
         }
         
     }
@@ -227,7 +233,8 @@ try {
             '    autoclose: false,',
             '    autoclose_delay: 0, //set to 20000 for ps4 hen',
             '    music: true,',
-            '    jb_behavior: 0',
+            '    jb_behavior: 0,',
+            "    theme: 'default'",
             '};',
             '',
             'var payloads = [ //to be ran after jailbroken',
@@ -247,7 +254,13 @@ try {
     } 
     else {
         var themeName = CONFIG.theme || 'default';
-        include('themes/' + themeName + '/main.js')
+        try {
+            include('themes/' + themeName + '/main.js');
+        } catch(e) {
+            log('Failed to load theme "' + themeName + '": ' + e.message);
+            log('Falling back to default theme');
+            include('themes/default/main.js');
+        }
     }
     
     // handle WebSocket received messages

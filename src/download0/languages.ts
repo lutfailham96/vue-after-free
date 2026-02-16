@@ -18,7 +18,8 @@ export const lang: Record<string, string> = {
   loadingMainMenu: 'Loading main menu...',
   mainMenuLoaded: 'Main menu loaded',
   loadingConfig: 'Loading config UI...',
-  configLoaded: 'Config UI loaded'
+  configLoaded: 'Config UI loaded',
+  theme: 'Theme'
 }
 
 export let useImageText = false
@@ -53,6 +54,7 @@ switch (detectedLocale) {
     lang.mainMenuLoaded = 'Menu principal cargado'
     lang.loadingConfig = 'Cargando configuracion...'
     lang.configLoaded = 'Configuracion cargada'
+    lang.theme = 'Tema'
     break
     // vue doesnt have these locales in the fonts for asian and arabic languages. need to figure out how to load custom font . please reference /app0/assets/font/ for examples
     // ~ case 'ar':
@@ -122,6 +124,7 @@ switch (detectedLocale) {
     lang.mainMenuLoaded = 'Menu principal carregado'
     lang.loadingConfig = 'Carregando configuracao...'
     lang.configLoaded = 'Configuracao carregada'
+    lang.theme = 'Tema'
     break
 
   case 'fr':
@@ -143,6 +146,7 @@ switch (detectedLocale) {
     lang.mainMenuLoaded = 'Menu principal charge'
     lang.loadingConfig = 'Chargement de la configuration...'
     lang.configLoaded = 'Configuration chargee'
+    lang.theme = 'Thème'
     break
 
   case 'de':
@@ -164,6 +168,7 @@ switch (detectedLocale) {
     lang.mainMenuLoaded = 'Hauptmenu geladen'
     lang.loadingConfig = 'Einstellungen werden geladen...'
     lang.configLoaded = 'Einstellungen geladen'
+    lang.theme = 'Thema'
     break
 
   case 'it':
@@ -185,6 +190,7 @@ switch (detectedLocale) {
     lang.mainMenuLoaded = 'Menu principale caricato'
     lang.loadingConfig = 'Caricamento configurazione...'
     lang.configLoaded = 'Configurazione caricata'
+    lang.theme = 'Tema'
     break
 
   case 'nl':
@@ -206,6 +212,7 @@ switch (detectedLocale) {
     lang.mainMenuLoaded = 'Hoofdmenu geladen'
     lang.loadingConfig = 'Instellingen laden...'
     lang.configLoaded = 'Instellingen geladen'
+    lang.theme = 'Thema'
     break
 
   case 'pl':
@@ -227,6 +234,7 @@ switch (detectedLocale) {
     lang.mainMenuLoaded = 'Menu glowne zaladowane'
     lang.loadingConfig = 'Ladowanie konfiguracji...'
     lang.configLoaded = 'Konfiguracja zaladowana'
+    lang.theme = 'Motyw'
     break
 
   case 'tr':
@@ -248,6 +256,7 @@ switch (detectedLocale) {
     lang.mainMenuLoaded = 'Ana menu yuklendi'
     lang.loadingConfig = 'Ayarlar yukleniyor...'
     lang.configLoaded = 'Ayarlar yuklendi'
+    lang.theme = 'Tema'
     break
 
   case 'ar':
@@ -269,6 +278,7 @@ switch (detectedLocale) {
     lang.mainMenuLoaded = 'تم تحميل القائمة الرئيسية'
     lang.loadingConfig = 'جاري تحميل الاعدادات...'
     lang.configLoaded = 'تم تحميل الاعدادات'
+    lang.theme = 'سمة'
     break
 
   case 'ja':
@@ -290,6 +300,7 @@ switch (detectedLocale) {
     lang.mainMenuLoaded = 'メインメニュー読み込み完了'
     lang.loadingConfig = '設定読み込み中...'
     lang.configLoaded = '設定読み込み完了'
+    lang.theme = 'テーマ'
     break
 
   case 'ko':
@@ -311,6 +322,7 @@ switch (detectedLocale) {
     lang.mainMenuLoaded = '메인 메뉴 로딩 완료'
     lang.loadingConfig = '설정 로딩중...'
     lang.configLoaded = '설정 로딩 완료'
+    lang.theme = '테마'
     break
 
   case 'zh':
@@ -332,6 +344,7 @@ switch (detectedLocale) {
     lang.mainMenuLoaded = '主菜单已加载'
     lang.loadingConfig = '正在加载设置...'
     lang.configLoaded = '设置已加载'
+    lang.theme = '主题'
     break
 
   case 'en':

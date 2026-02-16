@@ -309,7 +309,7 @@ import { fn, BigInt } from 'download0/types'
         if (selectedOption.script.includes('loader.js')) {
           include(selectedOption.script)
         } else {
-          include('themes/default/' + selectedOption.script)
+          include('themes/' + (typeof CONFIG !== 'undefined' && CONFIG.theme ? CONFIG.theme : 'default') + '/' + selectedOption.script)
         }
       } catch (e) {
         log('ERROR loading ' + selectedOption.script + ': ' + (e as Error).message)
