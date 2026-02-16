@@ -1,5 +1,4 @@
 import { libc_addr } from 'download0/userland'
-import { stats } from 'download0/stats-tracker'
 import { fn, mem, BigInt, utils } from 'download0/types'
 import { sysctlbyname } from 'download0/kernel'
 import { lapse } from 'download0/lapse'
@@ -16,27 +15,20 @@ jsmaf.loader_has_run = true
 if (typeof libc_addr === 'undefined') {
   include('userland.js')
 }
-include('stats-tracker.js')
 include('binloader.js')
 include('lapse.js')
 include('kernel.js')
 include('check-jailbroken.js')
-include('stats-tracker.js')
 log('All scripts loaded')
 
-// Increment total attempts
-stats.load()
-
-export function show_success (immediate?: boolean, skipStats?: boolean) {
+export function show_success (immediate?: boolean) {
   if (immediate) {
     jsmaf.root.children.push(bg_success)
     log('Logging Success...')
-    if (!skipStats) stats.incrementSuccess()
   } else {
     setTimeout(() => {
       jsmaf.root.children.push(bg_success)
       log('Logging Success...')
-      if (!skipStats) stats.incrementSuccess()
     }, 2000)
   }
 }
@@ -48,6 +40,7 @@ if (typeof CONFIG !== 'undefined' && CONFIG.music) {
 }
 
 const is_jailbroken = checkJailbroken()
+const themeFolder = (typeof CONFIG !== 'undefined' && typeof CONFIG.theme === 'string') ? CONFIG.theme : 'default'
 
 // Check if exploit has completed successfully
 function is_exploit_complete () {
@@ -115,7 +108,6 @@ const compare_version = (a: string, b: string) => {
 if (!is_jailbroken) {
   const jb_behavior = (typeof CONFIG !== 'undefined' && typeof CONFIG.jb_behavior === 'number') ? CONFIG.jb_behavior : 0
 
-  stats.incrementTotal()
   utils.notify(FW_VERSION + ' Detected!')
 
   let use_lapse = false
@@ -178,7 +170,7 @@ if (!is_jailbroken) {
   }
 } else {
   utils.notify('Already Jailbroken!')
-  try { include('main-menu.js') } catch (e) { /* escaped sandbox */ }
+  try { include('themes/' + themeFolder + '/main.js') } catch (e) { /* escaped sandbox */ }
 }
 
 export function run_binloader () {

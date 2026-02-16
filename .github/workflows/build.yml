@@ -53,8 +53,32 @@ jobs:
           mkdir -p dist/savedata
           cp src/savedata/localstorage.aes dist/savedata/
 
+      - name: Build lite variant
+        run: |
+          mkdir -p dist-lite/download0
+
+          # Core runtime JS
+          for f in serve.js.aes dummy_psn.json.aes loader.js userland.js types.js kernel.js \
+                   lapse.js netctrl_c0w_twins.js binloader.js check-jailbroken.js defs.js; do
+            cp dist/download0/$f dist-lite/download0/
+          done
+
+          # Hardcoded lite config - auto detect, auto close, no music, no menus
+          printf 'var CONFIG = {\n    autolapse: true,\n    autopoop: false,\n    autoclose: true,\n    autoclose_delay: 0,\n    music: false,\n    jb_behavior: 0\n};\nvar payloads = [];\n' > dist-lite/download0/config.js
+
+          # Generate lite manifest
+          cd dist-lite/download0
+          find . -type f | sed 's|^\./||' | sort > manifest.txt
+          cd ../..
+
+          # Copy savedata
+          cp -r dist/savedata dist-lite/savedata 2>/dev/null || true
+
       - name: Zip dist
         run: cd dist && zip -r ../vue-after-free-${{ github.ref_name }}.zip download0/ savedata/ && cd ..
+
+      - name: Zip lite dist
+        run: cd dist-lite && zip -r ../vue-after-free-lite-${{ github.ref_name }}.zip download0/ savedata/ && cd ..
 
       - name: Upload dist artifact
         uses: actions/upload-artifact@v4
@@ -68,11 +92,25 @@ jobs:
           name: vue-after-free-${{ github.ref_name }}
           path: vue-after-free-${{ github.ref_name }}.zip
 
-      - name: Upload release asset
+      - name: Upload lite dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-lite
+          path: dist-lite/
+
+      - name: Upload lite build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue-after-free-lite-${{ github.ref_name }}
+          path: vue-after-free-lite-${{ github.ref_name }}.zip
+
+      - name: Upload release assets
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2.4.2
         with:
-          files: vue-after-free-${{ github.ref_name }}.zip
+          files: |
+            vue-after-free-${{ github.ref_name }}.zip
+            vue-after-free-lite-${{ github.ref_name }}.zip
 
   # deploy-pages:
   #   needs: build
@@ -167,3 +205,71 @@ jobs:
         uses: softprops/action-gh-release@v2.4.2
         with:
           files: download0.dat.tar.xz
+
+  ufs-image-lite:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download lite dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-lite
+          path: dist-lite/
+
+      - name: Create lite UFS2 image in FreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: "14.2"
+          copyback: true
+          prepare: ""
+          run: |
+            set -e
+
+            # Create 256MB image file
+            truncate -s 256M download0.dat
+
+            # Attach as memory disk
+            MD=$(mdconfig -a -t vnode -f "$(pwd)/download0.dat")
+
+            # Create UFS2 filesystem
+            newfs -O 2 -b 32768 -f 4096 /dev/${MD}
+
+            # Mount
+            mount /dev/${MD} /mnt
+
+            # Copy lite dist contents
+            cp -R dist-lite/download0/* /mnt/
+
+            # Create empty dirs
+            mkdir -p /mnt/mgl /mnt/video_cache /mnt/xhr_cache
+
+            # Set permissions
+            chmod -R 777 /mnt/*
+
+            # Unmount and detach
+            umount /mnt
+            mdconfig -d -u ${MD}
+
+      - name: Verify image
+        run: file download0.dat
+
+      - name: Zip lite UFS2 image
+        run: zip download0_dat_lite.zip download0.dat
+
+      - name: Upload lite UFS2 image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: download0_dat_lite
+          path: download0_dat_lite.zip
+
+      - name: Delete lite dist artifact
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: dist-lite
+
+      - name: Upload lite UFS2 release asset
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: download0_dat_lite.zip
+>>>>>>> upstream/main

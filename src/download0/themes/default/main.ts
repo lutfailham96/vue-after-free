@@ -306,7 +306,11 @@ import { fn, BigInt } from 'download0/types'
       }
       log('Loading ' + selectedOption.script + '...')
       try {
-        include(selectedOption.script)
+        if (selectedOption.script.includes('loader.js')) {
+          include(selectedOption.script)
+        } else {
+          include('themes/default/' + selectedOption.script)
+        }
       } catch (e) {
         log('ERROR loading ' + selectedOption.script + ': ' + (e as Error).message)
         if ((e as Error).stack) log((e as Error).stack!)

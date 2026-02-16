@@ -481,7 +481,7 @@ export function binloader_init () {
 
         // Check if autoclose is enabled
         if (typeof CONFIG !== 'undefined' && CONFIG.autoclose && !BinLoader.skip_autoclose) {
-          log('CONFIG.autoclose enabled - terminating current process')
+          const closeDelay = (typeof CONFIG !== 'undefined' && CONFIG.autoclose_delay) ? CONFIG.autoclose_delay : 0 // set to 20000 for ps4 hen
 
           fn.register(0x14, 'getpid', [], 'bigint')
           fn.register(0x25, 'kill', ['bigint', 'bigint'], 'bigint')
@@ -489,13 +489,19 @@ export function binloader_init () {
           const pid = fn.getpid()
           const pid_num = (pid instanceof BigInt) ? pid.lo : pid
           log('Current PID: ' + pid_num)
-          log('Sending SIGKILL to PID ' + pid_num)
 
-          // Wait for 0.5 seconds to prevent crash
-          const delay_start = Date.now()
-          while (Date.now() - delay_start < 500) { /* busy wait */ }
-
-          fn.kill(pid, new BigInt(0, 9))
+          if (closeDelay > 0) {
+            log('CONFIG.autoclose enabled - closing in ' + (closeDelay / 1000) + ' seconds...')
+            utils.notify('Auto close in ' + (closeDelay / 1000) + ' seconds...')
+            const killId = jsmaf.setInterval(function () {
+              jsmaf.clearInterval(killId)
+              log('Sending SIGKILL to PID ' + pid_num)
+              fn.kill(pid, new BigInt(0, 9))
+            }, closeDelay)
+          } else {
+            log('CONFIG.autoclose enabled - closing now')
+            fn.kill(pid, new BigInt(0, 9))
+          }
         } else {
         // Call thrd_join to wait for thread completion
         // int thrd_join(thrd_t thr, int *res);
@@ -616,18 +622,9 @@ export function binloader_init () {
     try {
       BinLoader.init(payload.buf, payload.size)
 
-      if (!skip_autoclose) {
-        show_success(true, true)
-        log('Running payload in 3 seconds...')
-        const id = jsmaf.setInterval(function () {
-          jsmaf.clearInterval(id)
-          BinLoader.run()
-          log('Payload loaded successfully')
-        }, 3000)
-      } else {
-        BinLoader.run()
-        log('Payload loaded successfully')
-      }
+      BinLoader.run()
+      log('Payload loaded successfully')
+      if (!skip_autoclose) show_success(true)
     } catch (e) {
       log('ERROR loading payload: ' + (e as Error).message)
       if ((e as Error).stack) log((e as Error).stack ?? '')
@@ -702,7 +699,7 @@ export function binloader_init () {
       BinLoader.init(payload.buf, payload.size)
       BinLoader.run()
       log('Payload loaded successfully')
-      show_success(false, true)
+      show_success(false)
     } catch (e) {
       log('ERROR loading payload: ' + (e as Error).message)
       if ((e as Error).stack) log((e as Error).stack ?? '')

@@ -1,5 +1,4 @@
 import { libc_addr } from 'download0/userland'
-import { stats } from 'download0/stats-tracker'
 import { lang, useImageText, textImageBase } from 'download0/languages'
 
 if (typeof libc_addr === 'undefined') {
@@ -41,14 +40,20 @@ if (typeof lang === 'undefined') {
     autolapse: boolean
     autopoop: boolean
     autoclose: boolean
+    autoclose_delay: number
     music: boolean
     jb_behavior: number
+    theme: string
+    themes: string[]
   } = {
     autolapse: false,
     autopoop: false,
     autoclose: false,
+    autoclose_delay: 0,
     music: true,
-    jb_behavior: 0
+    jb_behavior: 0,
+    theme: 'default',
+    themes: ['default']
   }
 
   // Store user's payloads so we don't overwrite them
@@ -57,6 +62,11 @@ if (typeof lang === 'undefined') {
 
   const jbBehaviorLabels = [lang.jbBehaviorAuto, lang.jbBehaviorNetctrl, lang.jbBehaviorLapse]
   const jbBehaviorImgKeys = ['jbBehaviorAuto', 'jbBehaviorNetctrl', 'jbBehaviorLapse']
+
+  // These will be updated after config loads
+  let availableThemes = ['default']
+  let themeLabels: string[] = ['Default']
+  let themeImgKeys: string[] = ['themeDefault']
 
   let currentButton = 0
   const buttons: Image[] = []
@@ -116,56 +126,17 @@ if (typeof lang === 'undefined') {
     jsmaf.root.children.push(title)
   }
 
-  // Include the stats tracker
-  include('stats-tracker.js')
-
-  // Load and display stats
-  stats.load()
-  const statsData = stats.get()
-
-  // Create text elements for each stat
-  const statsImgKeys = ['totalAttempts', 'successes', 'failures', 'successRate', 'failureRate']
-  const statsValues = [statsData.total, statsData.success, statsData.failures, statsData.successRate, statsData.failureRate]
-  const statsLabels = [lang.totalAttempts, lang.successes, lang.failures, lang.successRate, lang.failureRate]
-
-  // Display each stat line
-  for (let i = 0; i < statsImgKeys.length; i++) {
-    const yPos = 120 + (i * 25)
-    if (useImageText) {
-      const labelImg = new Image({
-        url: textImageBase + statsImgKeys[i] + '.png',
-        x: 20,
-        y: yPos,
-        width: 180,
-        height: 25
-      })
-      jsmaf.root.children.push(labelImg)
-      const valueText = new jsmaf.Text()
-      valueText.text = String(statsValues[i])
-      valueText.x = 210
-      valueText.y = yPos
-      valueText.style = 'white'
-      jsmaf.root.children.push(valueText)
-    } else {
-      const lineText = new jsmaf.Text()
-      lineText.text = statsLabels[i] + statsValues[i]
-      lineText.x = 20
-      lineText.y = yPos
-      lineText.style = 'white'
-      jsmaf.root.children.push(lineText)
-    }
-  }
-
   const configOptions = [
     { key: 'autolapse', label: lang.autoLapse, imgKey: 'autoLapse', type: 'toggle' },
     { key: 'autopoop', label: lang.autoPoop, imgKey: 'autoPoop', type: 'toggle' },
     { key: 'autoclose', label: lang.autoClose, imgKey: 'autoClose', type: 'toggle' },
     { key: 'music', label: lang.music, imgKey: 'music', type: 'toggle' },
-    { key: 'jb_behavior', label: lang.jbBehavior, imgKey: 'jbBehavior', type: 'cycle' }
+    { key: 'jb_behavior', label: lang.jbBehavior, imgKey: 'jbBehavior', type: 'cycle' },
+    { key: 'theme', label: lang.theme || 'Theme', imgKey: 'theme', type: 'cycle' }
   ]
 
   const centerX = 960
-  const startY = 300
+  const startY = 200
   const buttonSpacing = 120
   const buttonWidth = 400
   const buttonHeight = 80
@@ -218,20 +189,41 @@ if (typeof lang === 'undefined') {
       jsmaf.root.children.push(checkmark)
     } else {
       let valueLabel: Image | jsmaf.Text
-      if (useImageText) {
-        valueLabel = new Image({
-          url: textImageBase + jbBehaviorImgKeys[currentConfig.jb_behavior] + '.png',
-          x: btnX + 230,
-          y: btnY + 15,
-          width: 150,
-          height: 50
-        })
-      } else {
-        valueLabel = new jsmaf.Text()
-        valueLabel.text = jbBehaviorLabels[currentConfig.jb_behavior] || jbBehaviorLabels[0]!
-        valueLabel.x = btnX + 250
-        valueLabel.y = btnY + 28
-        valueLabel.style = 'white'
+      if (configOption.key === 'jb_behavior') {
+        if (useImageText) {
+          valueLabel = new Image({
+            url: textImageBase + jbBehaviorImgKeys[currentConfig.jb_behavior] + '.png',
+            x: btnX + 230,
+            y: btnY + 15,
+            width: 150,
+            height: 50
+          })
+        } else {
+          valueLabel = new jsmaf.Text()
+          valueLabel.text = jbBehaviorLabels[currentConfig.jb_behavior] || jbBehaviorLabels[0]!
+          valueLabel.x = btnX + 250
+          valueLabel.y = btnY + 28
+          valueLabel.style = 'white'
+        }
+      } else if (configOption.key === 'theme') {
+        const themeIndex = availableThemes.indexOf(currentConfig.theme)
+        const displayIndex = themeIndex >= 0 ? themeIndex : 0
+
+        if (useImageText) {
+          valueLabel = new Image({
+            url: textImageBase + themeImgKeys[displayIndex] + '.png',
+            x: btnX + 230,
+            y: btnY + 15,
+            width: 150,
+            height: 50
+          })
+        } else {
+          valueLabel = new jsmaf.Text()
+          valueLabel.text = themeLabels[displayIndex] || themeLabels[0]!
+          valueLabel.x = btnX + 250
+          valueLabel.y = btnY + 28
+          valueLabel.style = 'white'
+        }
       }
       valueTexts.push(valueLabel)
       jsmaf.root.children.push(valueLabel)
@@ -241,51 +233,12 @@ if (typeof lang === 'undefined') {
     textOrigPos.push({ x: btnText.x, y: btnText.y })
   }
 
-  const backX = centerX - buttonWidth / 2
-  const backY = startY + configOptions.length * buttonSpacing + 100
-
-  const backButton = new Image({
-    url: normalButtonImg,
-    x: backX,
-    y: backY,
-    width: buttonWidth,
-    height: buttonHeight
-  })
-  buttons.push(backButton)
-  jsmaf.root.children.push(backButton)
-
-  const backMarker = new Image({
-    url: 'file:///assets/img/ad_pod_marker.png',
-    x: backX + buttonWidth - 50,
-    y: backY + 35,
-    width: 12,
-    height: 12,
-    visible: false
-  })
-  buttonMarkers.push(backMarker)
-  jsmaf.root.children.push(backMarker)
-
-  let backText: Image | jsmaf.Text
-  if (useImageText) {
-    backText = new Image({
-      url: textImageBase + 'back.png',
-      x: backX + 20,
-      y: backY + 15,
-      width: 200,
-      height: 50
-    })
-  } else {
-    backText = new jsmaf.Text()
-    backText.text = lang.back
-    backText.x = backX + buttonWidth / 2 - 20
-    backText.y = backY + buttonHeight / 2 - 12
-    backText.style = 'white'
-  }
-  buttonTexts.push(backText)
-  jsmaf.root.children.push(backText)
-
-  buttonOrigPos.push({ x: backX, y: backY })
-  textOrigPos.push({ x: backText.x, y: backText.y })
+  const backHint = new jsmaf.Text()
+  backHint.text = jsmaf.circleIsAdvanceButton ? 'X to go back' : 'O to go back'
+  backHint.x = centerX - 60
+  backHint.y = startY + configOptions.length * buttonSpacing + 120
+  backHint.style = 'white'
+  jsmaf.root.children.push(backHint)
 
   let zoomInInterval: number | null = null
   let zoomOutInterval: number | null = null
@@ -416,10 +369,21 @@ if (typeof lang === 'undefined') {
       const value = currentConfig[key as keyof typeof currentConfig]
       valueText.url = value ? 'file:///assets/img/check_small_on.png' : 'file:///assets/img/check_small_off.png'
     } else {
-      if (useImageText) {
-        (valueText as Image).url = textImageBase + jbBehaviorImgKeys[currentConfig.jb_behavior] + '.png'
-      } else {
-        (valueText as jsmaf.Text).text = jbBehaviorLabels[currentConfig.jb_behavior] || jbBehaviorLabels[0]
+      if (key === 'jb_behavior') {
+        if (useImageText) {
+          (valueText as Image).url = textImageBase + jbBehaviorImgKeys[currentConfig.jb_behavior] + '.png'
+        } else {
+          (valueText as jsmaf.Text).text = jbBehaviorLabels[currentConfig.jb_behavior] || jbBehaviorLabels[0]
+        }
+      } else if (key === 'theme') {
+        const themeIndex = availableThemes.indexOf(currentConfig.theme)
+        const displayIndex = themeIndex >= 0 ? themeIndex : 0
+
+        if (useImageText) {
+          (valueText as Image).url = textImageBase + themeImgKeys[displayIndex] + '.png'
+        } else {
+          (valueText as jsmaf.Text).text = themeLabels[displayIndex] || themeLabels[0]!
+        }
       }
     }
   }
@@ -433,8 +397,11 @@ if (typeof lang === 'undefined') {
     configContent += '    autolapse: ' + currentConfig.autolapse + ',\n'
     configContent += '    autopoop: ' + currentConfig.autopoop + ',\n'
     configContent += '    autoclose: ' + currentConfig.autoclose + ',\n'
+    configContent += '    autoclose_delay: ' + currentConfig.autoclose_delay + ', //set to 20000 for ps4 hen\n'
     configContent += '    music: ' + currentConfig.music + ',\n'
-    configContent += '    jb_behavior: ' + currentConfig.jb_behavior + '\n'
+    configContent += '    jb_behavior: ' + currentConfig.jb_behavior + ',\n'
+    configContent += '    theme: \'' + currentConfig.theme + '\',\n'
+    configContent += '    themes: ' + JSON.stringify(currentConfig.themes) + '\n' // without JSON.stringify corruption will happen
     configContent += '};\n\n'
     configContent += 'const payloads = [ //to be ran after jailbroken\n'
     for (let i = 0; i < userPayloads.length; i++) {
@@ -468,8 +435,26 @@ if (typeof lang === 'undefined') {
           currentConfig.autolapse = CONFIG.autolapse || false
           currentConfig.autopoop = CONFIG.autopoop || false
           currentConfig.autoclose = CONFIG.autoclose || false
+          currentConfig.autoclose_delay = CONFIG.autoclose_delay || 0
           currentConfig.music = CONFIG.music !== false
           currentConfig.jb_behavior = CONFIG.jb_behavior || 0
+
+          // Update available themes
+          if (CONFIG.themes && Array.isArray(CONFIG.themes) && CONFIG.themes.length > 0) {
+            availableThemes = CONFIG.themes.slice()
+            currentConfig.themes = CONFIG.themes.slice()
+            // Regenerate theme labels and image keys
+            themeLabels = availableThemes.map((theme: string) => theme.charAt(0).toUpperCase() + theme.slice(1))
+            themeImgKeys = availableThemes.map((theme: string) => 'theme' + theme.charAt(0).toUpperCase() + theme.slice(1))
+          }
+
+          // Validate and set theme
+          if (CONFIG.theme && availableThemes.includes(CONFIG.theme)) {
+            currentConfig.theme = CONFIG.theme
+          } else {
+            log('WARNING: Theme "' + (CONFIG.theme || 'undefined') + '" not found in available themes, using default')
+            currentConfig.theme = availableThemes[0] || 'default'
+          }
 
           // Preserve user's payloads
           if (typeof payloads !== 'undefined' && Array.isArray(payloads)) {
@@ -490,16 +475,21 @@ if (typeof lang === 'undefined') {
   }
 
   function handleButtonPress () {
-    if (currentButton === buttons.length - 1) {
-      log('Restarting...')
-      debugging.restart()
-    } else if (currentButton < configOptions.length) {
+    if (currentButton < configOptions.length) {
       const option = configOptions[currentButton]!
       const key = option.key
 
       if (option.type === 'cycle') {
-        currentConfig.jb_behavior = (currentConfig.jb_behavior + 1) % jbBehaviorLabels.length
-        log(key + ' = ' + jbBehaviorLabels[currentConfig.jb_behavior])
+        if (key === 'jb_behavior') {
+          currentConfig.jb_behavior = (currentConfig.jb_behavior + 1) % jbBehaviorLabels.length
+          log(key + ' = ' + jbBehaviorLabels[currentConfig.jb_behavior])
+        } else if (key === 'theme') {
+          const themeIndex = availableThemes.indexOf(currentConfig.theme)
+          const displayIndex = themeIndex >= 0 ? themeIndex : 0
+          const nextIndex = (displayIndex + 1) % availableThemes.length
+          currentConfig.theme = availableThemes[nextIndex]!
+          log(key + ' = ' + currentConfig.theme)
+        }
       } else {
         const boolKey = key as 'autolapse' | 'autopoop' | 'autoclose' | 'music'
         currentConfig[boolKey] = !currentConfig[boolKey]
@@ -532,6 +522,9 @@ if (typeof lang === 'undefined') {
     }
   }
 
+  const confirmKey = jsmaf.circleIsAdvanceButton ? 13 : 14
+  const backKey = jsmaf.circleIsAdvanceButton ? 14 : 13
+
   jsmaf.onKeyDown = function (keyCode) {
     if (keyCode === 6 || keyCode === 5) {
       currentButton = (currentButton + 1) % buttons.length
@@ -539,11 +532,15 @@ if (typeof lang === 'undefined') {
     } else if (keyCode === 4 || keyCode === 7) {
       currentButton = (currentButton - 1 + buttons.length) % buttons.length
       updateHighlight()
-    } else if (keyCode === 14) {
+    } else if (keyCode === confirmKey) {
       handleButtonPress()
-    } else if (keyCode === 13) {
+    } else if (keyCode === backKey) {
       log('Restarting...')
-      debugging.restart()
+      // Save config before restart
+      saveConfig()
+      jsmaf.setTimeout(function () {
+        debugging.restart()
+      }, 100)
     }
   }
 
