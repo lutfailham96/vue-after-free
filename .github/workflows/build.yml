@@ -135,7 +135,7 @@ jobs:
   #     - name: Deploy to GitHub Pages
   #       id: deployment
   #       uses: actions/deploy-pages@v4
-        
+
   ufs-image:
     needs: build
     runs-on: ubuntu-latest
@@ -186,14 +186,15 @@ jobs:
       - name: Compress image
         run: |
           sudo apt update
-          sudo apt install -y tar xz-utils
-          tar -cJf download0.dat.tar.xz download0.dat
+          sudo apt install -y tar xz-utils zip
+          # tar -cJf download0.dat.tar.xz download0.dat
+          zip -9 download0_dat.zip download0.dat
 
       - name: Upload UFS2 image artifact
         uses: actions/upload-artifact@v4
         with:
-          name: download0.dat.tar.xz
-          path: download0.dat.tar.xz
+          name: download0_dat.zip
+          path: download0_dat.zip
 
       - name: Delete dist artifact
         uses: geekyeggo/delete-artifact@v5
@@ -204,7 +205,7 @@ jobs:
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2.4.2
         with:
-          files: download0.dat.tar.xz
+          files: download0_dat.zip
 
   ufs-image-lite:
     needs: build
