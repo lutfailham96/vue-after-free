@@ -29,8 +29,12 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Replace version string with release tag
-        run: find ./dist -type f -name '*.js' -exec sed -i "s/%VERSION_STRING%/${{ github.ref_name }}/g" {} +
+      - name: Replace version strings
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          TAG="${{ github.event_name == 'release' && github.ref_name || '1.4' }}"
+          find ./dist -type f -name '*.js' -exec sed -i "s/%VERSION_STRING%/${SHORT_SHA}/g" {} +
+          find ./dist -type f -name '*.js' -exec sed -i "s/%VERSION_TAG%/${TAG}/g" {} +
 
       - name: Copy assets to dist
         run: |
