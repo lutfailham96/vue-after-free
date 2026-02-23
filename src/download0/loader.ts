@@ -24,11 +24,11 @@ log('All scripts loaded')
 export function show_success (immediate?: boolean) {
   if (immediate) {
     jsmaf.root.children.push(bg_success)
-    log('Logging Success...')
+    log('Showing Success Image...')
   } else {
     setTimeout(() => {
       jsmaf.root.children.push(bg_success)
-      log('Logging Success...')
+      log('Showing Success Image...')
     }, 2000)
   }
 }
