@@ -307,7 +307,7 @@ try {
 
         if(CONFIG.autolapse){
             include('loader.js')
-        } else if(CONFIG.autopoop && psn.mainUser.signedIn){
+        } else if(CONFIG.autopoop){
             CONFIG.jb_behavior = 1
             include('loader.js')
         } 
