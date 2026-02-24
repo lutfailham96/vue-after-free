@@ -44,6 +44,7 @@ jobs:
           cp -r src/download0/sfx dist/download0/
           cp -r src/download0/vid dist/download0/
           cp src/download0/*.aes dist/download0/
+          cp src/download0/config.json dist/download0/
 
       - name: Generate manifest
         run: |
