@@ -41,7 +41,7 @@ Only the userland, you cannot jailbreak above 13.00 with the files in this repo.
 You need any form of a network connection, not specifically internet. You can use your mobile phone hotspot or anyting else available. Vue will not launch the exploit without a network connection and will display "There was a problem connecting to the internet". Please see [Connection Instructions](https://github.com/Vuemony/vue-after-free?tab=readme-ov-file#connecting-to-the-internet). 
 
 **Q: I am getting "There is a network communication issue" error.**
-This indicates that either Vue has updated or your save file has reset. Use your own profile backup's save, or if using the system backup from this repo, unpack the `encryptedsavebackup.zip` to a USB and import it with the PS4 saved data management. Or if all the internal data is gone you can use the `OnlineSave` that is signed to VueUser to enable the jailbreak again, or resign it to your account. It is recommended to keep a copy of it which is signed to your main user or a spare user.
+This indicates that either Vue has updated or your save file has reset. Use your own profile backup's save, or if using the system backup from this repo, unpack the `encryptedsavebackup.zip` to a USB and import it with the PS4 saved data management. Or if all the internal data is gone you can use the `OnlineSave` that is signed to VueUser to enable the jailbreak again, or resign it to your account. It is recommended to keep a copy of it which is signed to your main user or a spare user. For more specific instructions see the [Gettting the jailbreak again](https://github.com/Vuemony/vue-after-free#getting-the-jailbreak-again) section.
 
 **Q: I am getting "This service requires you to sign in to PlayStation Network" even after replacing the save file, how can I fix it?**
 Your Vue app most likely updated. This usually happens when not using a DNS or blocking Sony servers. You will have to delete and reinstall it. You can use the Extended storage method to do that. 
@@ -107,6 +107,7 @@ Lastly Vue has a fun UI with cats and Theme support for you to tinker with along
 
 # Setup Instructions
 ## Jailbroken PS4
+If you are already jailbroken and want to update the exploit files use the udpate.js or see [Exploit update](https://github.com/Vuemony/vue-after-free#updating-vue-exploit)
 A network connection of any kind is required, before trying to run Vue please connect to a local network even if it does not have internet. [Connection Instructions](https://github.com/Vuemony/vue-after-free?tab=readme-ov-file#connecting-to-the-internet)
   1. Jailbreak your console.
   2. Enable FTP.
@@ -123,7 +124,7 @@ A network connection of any kind is required, before trying to run Vue please co
   13. Install PS Vue from your package installer, make sure `Background Installation` is off press on yes when it asks if you want to install it again (only for 1.01) then install the 1.24 patch. 
   14. Reboot your console then open PS Vue you will be told "This service requires you to sign in to PlayStation Network" press OK to continue, run the exploit by pressing on the jailbreak button or configure the autoloader and auto close. Note if using HEN before setting up Auto Close please edit the config.js and add 20 seconds to the close delay by writing `20000`. 
   * Backup the current save file to a USB via the console settings. Resign an `OnlineSave` in case of exploit file corruption.
-  15. Optionally after jailbreaking run the [np-fake-signin](https://github.com/Vuemony/vue-after-free/blob/main/README.md#np-fake-signin) payload to avoid the PSN pop-up.
+  15. Optionally after jailbreaking run the [np-fake-signin](https://github.com/Vuemony/vue-after-free/blob/main/README.md#np-fake-signin) payload to avoid the PSN pop-up. Lastly in this repo in src/icon is the Vue custom icon. If you'd like to set it up FTP to /user/appmeta/CUSA00960 delete icon0.png and place the one from this repo there, then reboot the console.
 
 ## For Non-Jailbroken PS4 Extended Storage and Save Resign
 ### Extended Storage Setup 
@@ -200,12 +201,22 @@ If you wish to use a new account instead of the default one in the system backup
   2. Fake activate it with Apollo Save Tool from User Tools>Activate PS4 Accounts. (optionally with the Account ID you want) then Reboot the console.
   3. On your USB unpack the save.zip from the VueManualSetup.zip in Releases.
   4. In Apollo Save Tool go to USB Saves and select the PS Vue save(CUSA00960) and choose the option "Copy save game to HDD".
+  
 
 ### Updating Vue Exploit
   1. Download the `VueManualSetup.7z` and replace download0.dat in `/user/download/CUSA000960/` and delete download0_info.dat with FTP while jailbroken.
 
 ### Updating Vue Exploit to Lite 
 1. Download the `VueManualLite.7z` and replace download0.dat in `/user/download/CUSA000960/` and delete download0_info.dat with FTP while jailbroken.
+
+# Getting the jailbreak again
+On occasion your Vue app may update or your save data may reset or your exploit data corrupts. This will make you unable to jailbreak but it is fixable.
+If Vue updated or you accidentally deleted it. 
+  1. Make sure the app is currently deleted if it updated. 
+  2. Rebuild your database in safe mode.
+  3. Follow the [Extended Storage Setup](https://github.com/Vuemony/vue-after-free#extended-storage-setup) to get it back.
+  4. Use the `OnlineSave` by either importing it or resigning it to your current account. Then launch Vue while you have a real internet connection see [Connection Instructions](https://github.com/Vuemony/vue-after-free?tab=readme-ov-file#connecting-to-the-internet).
+  5. Rebuild the FPKG database by following the guide here [Rebuilding FPKG Database](https://consolemods.org/wiki/PS4:Rebuilding_FPKG_Database)
 
 # Payloads
 Vue After Free comes preloaded with some payloads.
@@ -241,6 +252,7 @@ The update.js payload allows you to grab the latest files in the repo without ne
 
 # Themes 
 Themes can be added my simply copying the folder to `/download0/themes/` the default theme provides a good example of how a theme should be written.
+
 # Credits
 
 - [c0w-ar](https://github.com/c0w-ar/) — Lapse and NetCtrl porting  , Reverse Engineering
