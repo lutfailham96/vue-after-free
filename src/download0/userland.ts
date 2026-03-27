@@ -168,8 +168,6 @@ debug(`addrof(jsmaf.gc): ${jsmaf_gc_addr}`)
 const native_invoke_addr = mem.view(jsmaf_gc_addr).getBigInt(0x18, true)
 debug(`native_invoke_addr: ${native_invoke_addr}`)
 
-const eboot_addr = native_invoke_addr.sub(0x39330)
-
 mem.view(jsc_addr).setUint32(0x1E75B20, 1, true)
 log('Disabled GC')
 
@@ -178,6 +176,7 @@ rop.init(jsc_addr)
 fn.register(libc_addr.add(0x5F0), 'sceKernelGetModuleInfoForUnwind', ['bigint'], 'bigint')
 
 const libkernel_addr = utils.base_addr(_error_addr)
+const eboot_addr = utils.base_addr(native_invoke_addr)
 
 log(`jsc address: ${jsc_addr}`)
 log(`libc address: ${libc_addr}`)

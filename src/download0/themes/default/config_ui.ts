@@ -11,7 +11,7 @@ if (typeof lang === 'undefined') {
 }
 
 (function () {
-  log(lang.loadingConfig)
+  log('Loading config UI...')
 
   const fs = {
     write: function (filename: string, content: string, callback: (error: Error | null) => void) {
@@ -254,21 +254,11 @@ if (typeof lang === 'undefined') {
         const themeIndex = availableThemes.indexOf(currentConfig.theme)
         const displayIndex = themeIndex >= 0 ? themeIndex : 0
 
-        if (useImageText) {
-          valueLabel = new Image({
-            url: textImageBase + themeImgKeys[displayIndex] + '.png',
-            x: btnX + 230,
-            y: btnY + 15,
-            width: 150,
-            height: 50
-          })
-        } else {
-          valueLabel = new jsmaf.Text()
-          valueLabel.text = themeLabels[displayIndex] || themeLabels[0]!
-          valueLabel.x = btnX + 250
-          valueLabel.y = btnY + 28
-          valueLabel.style = 'white'
-        }
+        valueLabel = new jsmaf.Text()
+        valueLabel.text = themeLabels[displayIndex] || themeLabels[0]!
+        valueLabel.x = btnX + 250
+        valueLabel.y = btnY + 28
+        valueLabel.style = 'white'
       }
       valueTexts.push(valueLabel)
       jsmaf.root.children.push(valueLabel)
@@ -278,11 +268,22 @@ if (typeof lang === 'undefined') {
     textOrigPos.push({ x: btnText.x, y: btnText.y })
   }
 
-  const backHint = new jsmaf.Text()
-  backHint.text = jsmaf.circleIsAdvanceButton ? 'X to go back' : 'O to go back'
-  backHint.x = centerX - 60
-  backHint.y = startY + configOptions.length * buttonSpacing + 120
-  backHint.style = 'white'
+  let backHint: Image | jsmaf.Text
+  if (useImageText) {
+    backHint = new Image({
+      url: textImageBase + (jsmaf.circleIsAdvanceButton ? 'xToGoBack.png' : 'oToGoBack.png'),
+      x: centerX - 60,
+      y: startY + configOptions.length * buttonSpacing + 120,
+      width: 150,
+      height: 40
+    })
+  } else {
+    backHint = new jsmaf.Text()
+    backHint.text = jsmaf.circleIsAdvanceButton ? lang.xToGoBack : lang.oToGoBack
+    backHint.x = centerX - 60
+    backHint.y = startY + configOptions.length * buttonSpacing + 120
+    backHint.style = 'white'
+  }
   jsmaf.root.children.push(backHint)
 
   let zoomInInterval: number | null = null
@@ -422,13 +423,9 @@ if (typeof lang === 'undefined') {
         }
       } else if (key === 'theme') {
         const themeIndex = availableThemes.indexOf(currentConfig.theme)
-        const displayIndex = themeIndex >= 0 ? themeIndex : 0
+        const displayIndex = themeIndex >= 0 ? themeIndex : 0;
 
-        if (useImageText) {
-          (valueText as Image).url = textImageBase + themeImgKeys[displayIndex] + '.png'
-        } else {
-          (valueText as jsmaf.Text).text = themeLabels[displayIndex] || themeLabels[0]!
-        }
+        (valueText as jsmaf.Text).text = themeLabels[displayIndex] || themeLabels[0]!
       }
     }
   }
@@ -597,5 +594,5 @@ if (typeof lang === 'undefined') {
   updateHighlight()
   loadConfig()
 
-  log(lang.configLoaded)
+  log('Config UI loaded.')
 })()

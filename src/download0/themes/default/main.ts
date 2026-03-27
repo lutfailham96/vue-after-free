@@ -4,7 +4,7 @@ import { fn, BigInt } from 'download0/types'
 
 (function () {
   include('languages.js')
-  log(lang.loadingMainMenu)
+  log('Loading main menu...')
 
   let currentButton = 0
   const buttons: Image[] = []
@@ -309,5 +309,5 @@ import { fn, BigInt } from 'download0/types'
 
   updateHighlight()
 
-  log(lang.mainMenuLoaded)
+  log('Main menu loaded.')
 })()
