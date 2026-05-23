@@ -28,6 +28,7 @@ TEXT_COLOR = (255, 255, 255, 255)
 
 FONTS = {
     "ar": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "de": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "ja": "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
     "ko": "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
     "zh": "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
@@ -50,6 +51,23 @@ TRANSLATIONS = {
         "theme": "سمة",
         "xToGoBack": "X للرجوع",
         "oToGoBack": "O للرجوع",
+    },
+    "de": {
+        "jailbreak": "Jailbreak",
+        "payloadMenu": "Payload-Menü",
+        "config": "Einstellungen",
+        "exit": "Beenden",
+        "autoLapse": "Auto Lapse",
+        "autoPoop": "Auto Poop",
+        "autoClose": "Auto schließen",
+        "music": "Musik",
+        "jbBehavior": "JB-Verhalten",
+        "jbBehaviorAuto": "Automatisch",
+        "jbBehaviorNetctrl": "NetControl",
+        "jbBehaviorLapse": "Lapse",
+        "theme": "Thema",
+        "xToGoBack": "X zum Zurückgehen",
+        "oToGoBack": "O zum Zurückgehen",
     },
     "ja": {
         "jailbreak": "脱獄",
@@ -105,10 +123,13 @@ TRANSLATIONS = {
 }
 
 
-def create_text_image(text, font_path, font_size, output_path):
+def create_text_image(text, font_path, font_size, output_path, lang):
     # arabic text needs reshaping and bidi processing
-    reshaped_text = arabic_reshaper.reshape(text)
-    bidi_text = get_display(reshaped_text)
+    if lang == "ar":
+        reshaped_text = arabic_reshaper.reshape(text)
+        bidi_text = get_display(reshaped_text)
+    else:
+        bidi_text = text
 
     # Use fixed dimensions to match existing button text images
     img = Image.new("RGBA", (IMAGE_WIDTH, IMAGE_HEIGHT), (0, 0, 0, 0))
@@ -162,7 +183,7 @@ def main():
         for key, text in translations.items():
             initial_size = FONT_SIZE_TITLE if key == "config" else FONT_SIZE_BUTTON
             output_path = os.path.join(lang_dir, f"{key}.png")
-            create_text_image(text, font_path, initial_size, output_path)
+            create_text_image(text, font_path, initial_size, output_path, lang)
 
     print(f"\nGenerated text images in: {output_base}")
 

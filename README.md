@@ -122,7 +122,7 @@ A network connection of any kind is required, before trying to run Vue please co
   11. Plug the USB into the console.
   12. In Apollo Save Tool go to USB Saves and select the PS Vue save(CUSA00960) and choose the option "Copy save game to HDD".
   13. Install PS Vue from your package installer, make sure `Background Installation` is off press on yes when it asks if you want to install it again (only for 1.01) then install the 1.24 patch. 
-  14. Reboot your console then open PS Vue you will be told "This service requires you to sign in to PlayStation Network" press OK to continue, run the exploit by pressing on the jailbreak button or configure the autoloader and auto close. Note if using HEN before setting up Auto Close please edit the config.js and add 20 seconds to the close delay by writing `20000`. 
+  14. Reboot your console then open PS Vue you will be told "This service requires you to sign in to PlayStation Network" press OK to continue, run the exploit by pressing on the jailbreak button or configure the autoloader and auto close. Note if using HEN before setting up Auto Close please edit the config.json and add 20 seconds to the close delay by writing `20000`. 
   * Backup the current save file to a USB via the console settings. Resign an `OnlineSave` in case of exploit file corruption.
   15. Optionally after jailbreaking run the [np-fake-signin](https://github.com/Vuemony/vue-after-free/blob/main/README.md#np-fake-signin) payload to avoid the PSN pop-up. Lastly in this repo in src/icon is the Vue custom icon. If you'd like to set it up FTP to /user/appmeta/CUSA00960 delete icon0.png and place the one from this repo there, then reboot the console.
 
@@ -158,7 +158,7 @@ A network connection of any kind is required, before trying to run Vue please co
   3. After resigning the save file place it on a USB in the path `PS4/SAVEDATA/XXXXXXXXXXXXXXXX/CUSA00960` and plug it into your PS4. And make a backup of the save file you just resgined. 
   4. Go to `Settings>Apliccation Saved Data Management>Saved Data on USB Storage Device>Copy to System Storage`. Select the Vue save file and move it.
   5. Open the application you will be told "This service requires you to sign in to PlayStation Network" press OK to continue and wait a few seconds a screen will appear asking you to pick between a full install and a lite install choose whichever you want. If you choose Lite mode the exploit will always launch as soon as you open the app after the initial prompt. Optionally after jailbreaking run the [np-fake-signin](https://github.com/Vuemony/vue-after-free/blob/main/README.md#np-fake-signin) payload to avoid the PSN pop-up.
-* After a successful jailbreak you will only need to run the app again in the future. Note if using HEN before setting up Auto Close please edit the config.js and add 20 seconds to the close delay by writing `20000`.
+* After a successful jailbreak you will only need to run the app again in the future. Note if using HEN before setting up Auto Close please edit the config.json and add 20 seconds to the close delay by writing `20000`.
 
 ## Non-Jailbroken PS4 System Backup 
 A network connection of any kind is required, before trying to run Vue please connect to a local network even if it does not have internet, directly after restoring the system backup but if it does make sure you have first read the instructions  >. [Connection Instructions](https://github.com/Vuemony/vue-after-free?tab=readme-ov-file#connecting-to-the-internet)
@@ -175,7 +175,7 @@ A network connection of any kind is required, before trying to run Vue please co
   8. When the console reboots you will have a fake activated user account and PS Vue and it's exploit data.
   9. In the root of your USB place HEN or GoldHEN named as `payload.bin`. It will be loaded from `/data/` in the future so you do not need the USB after the first time.
   10. Safely connect to any network as mentioned above.
-  11. Open PS Vue you will be told "This service requires you to sign in to PlayStation Network" press OK to continue run the exploit by pressing on the jailbreak button or configure the autoloader and auto close. Note if using HEN before setting up Auto Close please edit the config.js and add 20 seconds to the close delay by writing `20000`. Backup the current save file to a USB via the console settings. 
+  11. Open PS Vue you will be told "This service requires you to sign in to PlayStation Network" press OK to continue run the exploit by pressing on the jailbreak button or configure the autoloader and auto close. Note if using HEN before setting up Auto Close please edit the config.json and add 20 seconds to the close delay by writing `20000`. Backup the current save file to a USB via the console settings. 
   12. Optionally after jailbreaking run the [np-fake-signin](https://github.com/Vuemony/vue-after-free/blob/main/README.md#np-fake-signin) payload to avoid the PSN pop-up.
   * User account ID is "1111111111111111" you cannot change it but you can create another user and fake activate it (instructions below), then while jailbroken follow the instructions above for jailbroken users to set up PS Vue while signed into the newly activated account. Resign an `OnlineSave` in case of exploit file corruption.
 
@@ -241,7 +241,7 @@ After a successful jailbreak run you can choose to have the application automati
 Music can be enabled or disabled.
 
 # Automatic Payloads
-In config.js you can add .bin or .elf files to be loaded automatically on kernel exploit completion. HEN or GoldHEN should not be added there as they are already loaded via USB or from the /data/ directory automatically.
+In config.json you can add .bin or .elf files to be loaded automatically on kernel exploit completion. HEN or GoldHEN should not be added there as they are already loaded via USB or from the /data/ directory automatically.
 Example: `/mnt/sandbox/download/CUSA00960/payloads/kernel_dumper.bin`
 
 # NP-Fake-SignIn

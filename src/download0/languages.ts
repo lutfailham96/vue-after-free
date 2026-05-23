@@ -29,7 +29,7 @@ if (!detectedLocale) {
 
 log('Detected locale: ' + detectedLocale)
 
-const IMAGE_TEXT_LOCALES = ['ar', 'ja', 'ko', 'zh']
+const IMAGE_TEXT_LOCALES = ['ar', 'de', 'ja', 'ko', 'zh']
 if (IMAGE_TEXT_LOCALES.includes(detectedLocale)) {
   useImageText = true
   textImageBase = 'file:///../download0/img/text/' + detectedLocale + '/'
@@ -101,20 +101,20 @@ switch (detectedLocale) {
   case 'de':
     // German
     lang.jailbreak = 'Jailbreak'
-    lang.payloadMenu = 'Payload Menu'
+    lang.payloadMenu = 'Payload-Menü'
     lang.config = 'Einstellungen'
     lang.exit = 'Beenden'
     lang.autoLapse = 'Auto Lapse'
     lang.autoPoop = 'Auto Poop'
-    lang.autoClose = 'Auto Schliessen'
+    lang.autoClose = 'Auto schließen'
     lang.music = 'Musik'
-    lang.jbBehavior = 'JB Verhalten'
-    lang.jbBehaviorAuto = 'Auto Erkennen'
+    lang.jbBehavior = 'JB-Verhalten'
+    lang.jbBehaviorAuto = 'Automatisch'
     lang.jbBehaviorNetctrl = 'NetControl'
     lang.jbBehaviorLapse = 'Lapse'
     lang.theme = 'Thema'
-    lang.xToGoBack = 'X für Zurueck'
-    lang.oToGoBack = 'O für Zurueck'
+    lang.xToGoBack = 'X zum Zurückgehen'
+    lang.oToGoBack = 'O zum Zurückgehen'
     break
 
   case 'it':
